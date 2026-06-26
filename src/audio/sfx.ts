@@ -14,6 +14,7 @@ let unlockInstalled = false
 // --- Music state ---
 let musicGain: GainNode | null = null
 let musicStarted = false
+let musicPaused = false
 const MUSIC_LEVEL = 0.4 // looped-track level relative to master volume
 
 function getCtx(): AudioContext | null {
@@ -27,7 +28,7 @@ function getCtx(): AudioContext | null {
 }
 
 function musicTarget(): number {
-  return muted ? 0 : masterVolume * MUSIC_LEVEL
+  return muted || musicPaused ? 0 : masterVolume * MUSIC_LEVEL
 }
 
 // Resume the audio context from within a real user-gesture handler so later
@@ -193,6 +194,12 @@ export function playGameOver(): void {
 export function setMuted(value: boolean): void {
   muted = value
   if (musicGain && ctx) musicGain.gain.setTargetAtTime(musicTarget(), ctx.currentTime, 0.05)
+}
+
+// Pause/resume the music bed alongside the game (smoothly ducks it to silence).
+export function setMusicPaused(paused: boolean): void {
+  musicPaused = paused
+  if (musicGain && ctx) musicGain.gain.setTargetAtTime(musicTarget(), ctx.currentTime, 0.04)
 }
 
 export function isMuted(): boolean {

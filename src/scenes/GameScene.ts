@@ -12,7 +12,7 @@ import {
 } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { Dropper } from '../objects/Dropper'
-import { playMerge, playDrop, playJackpot, playGameOver } from '../audio/sfx'
+import { playMerge, playDrop, playJackpot, playGameOver, setMusicPaused } from '../audio/sfx'
 import { loadHighScore, saveHighScore } from '../storage'
 import { computeLayout } from '../layout'
 
@@ -139,6 +139,7 @@ export class GameScene extends Phaser.Scene {
       this.matter.world.resume()
       this.dropper.setEnabled(true)
     }
+    setMusicPaused(this.paused)
   }
 
   // Clear the board, score, and dropper in place (no scene restart, so the
@@ -148,6 +149,7 @@ export class GameScene extends Phaser.Scene {
     this.paused = false
     this.loseLine.setAlpha(0.4)
     this.matter.world.resume()
+    setMusicPaused(false)
 
     this.pendingMerges = []
     for (const fruit of this.fruits) {
@@ -170,6 +172,7 @@ export class GameScene extends Phaser.Scene {
       this.highScore = this.score
       saveHighScore(this.highScore)
     }
+    setMusicPaused(false)
     this.scene.stop('UIScene')
     this.scene.start('TitleScene')
   }
