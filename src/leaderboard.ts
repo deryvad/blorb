@@ -78,7 +78,7 @@ export async function submitScore(name: string, score: number): Promise<number |
   if (!isConfigured()) return null
   const token = await session()
   if (!token) return null
-  const member = (name.trim().slice(0, 12) || 'YOU').toUpperCase()
+  const member = name.trim().slice(0, 16) || 'YOU'
   try {
     const res = await fetch(`${CONFIG.baseUrl}/leaderboards/${CONFIG.leaderboardKey}/submit`, {
       method: 'POST',
@@ -106,10 +106,28 @@ export async function topScores(count = 10): Promise<LeaderboardEntry[]> {
     const items = Array.isArray(data.items) ? data.items : []
     return items.map((it) => ({
       rank: it.rank ?? 0,
-      name: String(it.metadata || it.member_id || '???').slice(0, 12),
+      name: String(it.metadata || it.member_id || '???').slice(0, 16),
       score: it.score ?? 0,
     }))
   } catch {
     return []
   }
+}
+
+// Playful default leaderboard names (adjective + noun), e.g. "Fluffy Cat".
+const NAME_ADJ = [
+  'Fluffy', 'Mooing', 'Sleepy', 'Bouncy', 'Wiggly', 'Sneaky', 'Grumpy', 'Giggly', 'Sparkly',
+  'Wobbly', 'Zippy', 'Cosmic', 'Salty', 'Cheeky', 'Dizzy', 'Jolly', 'Spicy', 'Fuzzy', 'Snappy',
+  'Mighty', 'Soggy', 'Plucky', 'Derpy', 'Toasty',
+]
+const NAME_NOUN = [
+  'Cat', 'Moon', 'Pickle', 'Waffle', 'Penguin', 'Noodle', 'Bubble', 'Potato', 'Otter', 'Muffin',
+  'Comet', 'Llama', 'Toast', 'Pirate', 'Wizard', 'Dragon', 'Gnome', 'Taco', 'Cookie', 'Panda',
+  'Sloth', 'Yeti', 'Goose', 'Donut',
+]
+
+export function randomName(): string {
+  const a = NAME_ADJ[Math.floor(Math.random() * NAME_ADJ.length)]
+  const n = NAME_NOUN[Math.floor(Math.random() * NAME_NOUN.length)]
+  return `${a} ${n}`
 }

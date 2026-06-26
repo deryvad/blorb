@@ -5,7 +5,7 @@
 // openLeaderboard(score) submits `score` (asking for a name once, then
 // remembering it) and shows the Top 10. openLeaderboard() just shows the board.
 
-import { topScores, submitScore, isConfigured, type LeaderboardEntry } from './leaderboard'
+import { topScores, submitScore, isConfigured, randomName, type LeaderboardEntry } from './leaderboard'
 import { loadPlayerName, savePlayerName } from './storage'
 
 let overlay: HTMLDivElement | null = null
@@ -86,12 +86,62 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
   const status = styled('div', 'min-height:18px;font-size:13px;color:#aab0c0;margin-bottom:8px')
   panel.appendChild(status)
 
+  const nameRow = styled('div', 'display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:#aab0c0')
+  panel.appendChild(nameRow)
+
   const list = styled('div', 'overflow:auto;flex:1')
   list.appendChild(styled('div', 'padding:22px;text-align:center;color:#9aa0b0', 'Loading…'))
   panel.appendChild(list)
 
   let me = loadPlayerName()
   const refresh = async (): Promise<void> => renderRows(list, await topScores(10), me)
+
+  const editName = (): void => {
+    nameRow.innerHTML = ''
+    const inp = styled(
+      'input',
+      'flex:1;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.14);' +
+        'background:#14141b;color:#fff;font-size:14px;outline:none',
+    ) as HTMLInputElement
+    inp.maxLength = 16
+    inp.value = me
+    const save = styled(
+      'button',
+      'padding:7px 13px;border:none;border-radius:8px;background:#2b8a3e;color:#fff;font-weight:700;cursor:pointer;font-size:13px',
+      'Save',
+    ) as HTMLButtonElement
+    nameRow.appendChild(inp)
+    nameRow.appendChild(save)
+    setTimeout(() => {
+      inp.focus()
+      inp.select()
+    }, 30)
+    const commit = (): void => {
+      const n = inp.value.trim()
+      if (n === '') {
+        inp.focus()
+        return
+      }
+      me = n
+      savePlayerName(n)
+      renderNameRow()
+      void refresh()
+    }
+    save.addEventListener('click', commit)
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit()
+    })
+  }
+  const renderNameRow = (): void => {
+    nameRow.innerHTML = ''
+    if (me === '') return
+    nameRow.appendChild(styled('span', '', 'Playing as'))
+    nameRow.appendChild(styled('span', 'font-weight:700;color:#e6e6ea', me))
+    const change = styled('button', 'margin-left:auto;border:none;background:transparent;color:#4dabf7;cursor:pointer;font-size:13px', 'Change name')
+    change.addEventListener('click', editName)
+    nameRow.appendChild(change)
+  }
+  renderNameRow()
 
   if (submitValue !== undefined && me === '') {
     // First post: ask for a name, then submit.
@@ -102,7 +152,8 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
       'flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);' +
         'background:#14141b;color:#fff;font-size:16px;outline:none',
     ) as HTMLInputElement
-    input.maxLength = 12
+    input.maxLength = 16
+    input.value = randomName()
     input.placeholder = 'Your name'
     const go = styled(
       'button',
@@ -112,7 +163,10 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     form.appendChild(input)
     form.appendChild(go)
     panel.insertBefore(form, list)
-    setTimeout(() => input.focus(), 50)
+    setTimeout(() => {
+      input.focus()
+      input.select()
+    }, 50)
 
     const doPost = async (): Promise<void> => {
       const n = input.value.trim()
@@ -122,6 +176,7 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
       }
       me = n
       savePlayerName(n)
+      renderNameRow()
       form.remove()
       status.textContent = 'Posting…'
       const rank = await submitScore(n, submitValue)
@@ -145,7 +200,7 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     return
   }
 
-  status.textContent = me !== '' ? `Playing as ${me}` : ''
+  status.textContent = ''
   await refresh()
 }
 
@@ -181,7 +236,8 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
       'flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);' +
         'background:#14141b;color:#fff;font-size:16px;outline:none',
     ) as HTMLInputElement
-    input.maxLength = 12
+    input.maxLength = 16
+    input.value = randomName()
     input.placeholder = 'Your name'
     const post = styled(
       'button',
@@ -193,7 +249,10 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
     panel.appendChild(row)
     ov.appendChild(panel)
     document.body.appendChild(ov)
-    setTimeout(() => input.focus(), 50)
+    setTimeout(() => {
+      input.focus()
+      input.select()
+    }, 50)
 
     const done = (result: { name: string; rank: number | null } | null): void => {
       ov.remove()
