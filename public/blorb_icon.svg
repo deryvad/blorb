@@ -1,0 +1,44 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22252E"/>
+      <stop offset="100%" stop-color="#121419"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="36%" cy="28%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="ds" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="26" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="tileclip"><rect x="0" y="0" width="1024" height="1024" rx="230"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#tileclip)">
+    <rect x="0" y="0" width="1024" height="1024" fill="url(#tile)"/>
+    <!-- faint inner vignette glow -->
+    <circle cx="512" cy="470" r="520" fill="#3A4A8A" opacity="0.10"/>
+
+    <!-- tiny orange -->
+    <g filter="url(#ds)">
+      <circle cx="285" cy="330" r="95" fill="#E3A454"/>
+    </g>
+    <circle cx="285" cy="330" r="95" fill="url(#sheen)"/>
+
+    <!-- main blue bubble -->
+    <g filter="url(#ds)">
+      <circle cx="470" cy="540" r="300" fill="#73AAF4"/>
+    </g>
+    <circle cx="470" cy="540" r="300" fill="url(#sheen)"/>
+
+    <!-- merging lime bubble -->
+    <g filter="url(#ds)">
+      <circle cx="760" cy="360" r="170" fill="#BAE25A"/>
+    </g>
+    <circle cx="760" cy="360" r="170" fill="url(#sheen)"/>
+  </g>
+
+  <!-- subtle top edge light, like macOS tiles -->
+  <rect x="0" y="0" width="1024" height="1024" rx="230" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="3"/>
+</svg>
