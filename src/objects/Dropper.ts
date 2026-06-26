@@ -86,6 +86,8 @@ export class Dropper {
     if (ui && ui.input && ui.input.hitTestPointer(pointer).length > 0) return
     const wx = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y).x
     if (wx < 0 || wx > GAME.width) return
+    // Drop where you tap/click — the held bubble lands at the pointer's column.
+    this.posX = wx
     this.drop()
   }
 

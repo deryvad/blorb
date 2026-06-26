@@ -39,6 +39,9 @@ export class UIScene extends Phaser.Scene {
   private soundIcon!: Phaser.GameObjects.Image
   private soundText!: Phaser.GameObjects.Text
   private soundSetColor!: (c: number) => void
+  private miniBtns: Phaser.GameObjects.Container[] = []
+  private miniSoundIcon!: Phaser.GameObjects.Image
+  private miniSoundCircle!: Phaser.GameObjects.Arc
 
   private pauseDim!: Phaser.GameObjects.Rectangle
   private pauseContent!: Phaser.GameObjects.Container
@@ -121,6 +124,18 @@ export class UIScene extends Phaser.Scene {
     const home = this.makeIconButton('ic-home', 'Home', 0x6741d9, () => this.gameScene.goHome())
     this.homeBtn = home.container
 
+    // Compact icon-only buttons for portrait / mobile (the text pills are too big there).
+    const mPause = this.makeMiniButton('ic-pause', 0x1971c2, () => this.gameScene.togglePause())
+    const mSound = this.makeMiniButton(isMuted() ? 'ic-mute' : 'ic-sound', isMuted() ? 0x4a4f5c : 0x2b8a3e, () => {
+      this.toggleMute()
+      this.refreshSoundButtons()
+    })
+    const mHome = this.makeMiniButton('ic-home', 0x6741d9, () => this.gameScene.goHome())
+    this.miniBtns = [mPause.container, mSound.container, mHome.container]
+    this.miniSoundIcon = mSound.icon
+    this.miniSoundCircle = mSound.circle
+    this.miniBtns.forEach((c) => c.setVisible(false))
+
     this.buildPauseOverlay()
     this.buildGameOverOverlay()
 
@@ -200,30 +215,43 @@ export class UIScene extends Phaser.Scene {
     this.goContent.setPosition(W / 2, H / 2).setScale(oScale)
   }
 
+  // Compact mobile HUD: logo top-left, score under it, icon buttons + next top-right.
   private layoutPortrait(L: Layout): void {
     const b = L.board
     const s = L.scale
-    const pad = 16 * s
+    const pad = 14 * s
 
     this.leftCard.clear()
     this.rightCard.clear()
-    this.wordmark.setVisible(false)
 
-    this.scoreLabel.setOrigin(0, 0.5).setPosition(b.x + pad, b.y + pad + 6 * s).setFontSize(this.fs(11, s))
-    this.scoreText.setOrigin(0, 0).setPosition(b.x + pad, b.y + pad + 14 * s).setFontSize(this.fs(28, s))
-    this.bestText.setOrigin(0, 0).setPosition(b.x + pad, b.y + pad + 48 * s).setFontSize(this.fs(14, s))
+    // Blorb logo, top-left.
+    this.wordmark
+      .setVisible(true)
+      .setPosition(b.x + pad + 58 * s, b.y + pad + 16 * s)
+      .setDisplaySize(116 * s, 116 * s * (1140 / 3663))
 
-    this.nextLabel.setPosition(b.x + b.w - 40 * s, b.y + 18 * s).setFontSize(this.fs(12, s)).setVisible(true)
-    this.nextDisplay = 40 * s
-    this.nextImg.setPosition(b.x + b.w - 40 * s, b.y + 52 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
+    // Score + best, under the logo.
+    this.scoreLabel.setOrigin(0, 0.5).setPosition(b.x + pad, b.y + pad + 46 * s).setFontSize(this.fs(11, s))
+    this.scoreText.setOrigin(0, 0).setPosition(b.x + pad, b.y + pad + 54 * s).setFontSize(this.fs(26, s))
+    this.bestText.setOrigin(0, 0).setPosition(b.x + pad, b.y + pad + 86 * s).setFontSize(this.fs(13, s))
 
-    const bs = s * 0.82
-    this.pauseBtn.setPosition(b.x + pad + 66 * bs, b.y + pad + 92 * s).setScale(bs)
-    this.muteBtn.setPosition(b.x + pad + 66 * bs, b.y + pad + 148 * s).setScale(bs)
-    this.homeBtn.setPosition(b.x + pad + 66 * bs, b.y + pad + 204 * s).setScale(bs).setVisible(true)
+    // Icon buttons, top-right row (pause · sound · home).
+    const gap = 52 * s
+    const startX = b.x + b.w - pad - 22 * s - (this.miniBtns.length - 1) * gap
+    this.miniBtns.forEach((c, i) =>
+      c.setVisible(true).setScale(s).setPosition(startX + i * gap, b.y + pad + 22 * s),
+    )
 
-    this.controlsText.setPosition(b.x + b.w / 2, b.y + b.h - 14 * s).setFontSize(this.fs(12, s)).setVisible(true)
+    // Next, under the icons (right).
+    this.nextLabel.setOrigin(0.5).setPosition(b.x + b.w - pad - 22 * s, b.y + pad + 60 * s).setFontSize(this.fs(11, s)).setVisible(true)
+    this.nextDisplay = 38 * s
+    this.nextImg.setPosition(b.x + b.w - pad - 22 * s, b.y + pad + 90 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
 
+    // Hide landscape-only chrome.
+    this.pauseBtn.setVisible(false)
+    this.muteBtn.setVisible(false)
+    this.homeBtn.setVisible(false)
+    this.controlsText.setVisible(false)
     this.howtoLabel.setVisible(false)
     this.howtoText.setVisible(false)
     this.ladderLabel.setVisible(false)
@@ -248,8 +276,9 @@ export class UIScene extends Phaser.Scene {
     this.howtoLabel.setPosition(leftCx, b.y + b.h * 0.4).setFontSize(this.fs(12, s)).setVisible(true)
     this.howtoText.setOrigin(0.5, 0).setPosition(leftCx, b.y + b.h * 0.4 + 34 * s).setFontSize(this.fs(13, s)).setLineSpacing(5 * s).setVisible(true)
 
-    this.pauseBtn.setPosition(leftCx, b.y + b.h * 0.64).setScale(s)
-    this.muteBtn.setPosition(leftCx, b.y + b.h * 0.64 + 64 * s).setScale(s)
+    this.miniBtns.forEach((c) => c.setVisible(false))
+    this.pauseBtn.setPosition(leftCx, b.y + b.h * 0.64).setScale(s).setVisible(true)
+    this.muteBtn.setPosition(leftCx, b.y + b.h * 0.64 + 64 * s).setScale(s).setVisible(true)
     this.homeBtn.setPosition(leftCx, b.y + b.h * 0.64 + 128 * s).setScale(s).setVisible(true)
 
     // Right panel: next preview → score → progress ladder.
@@ -434,6 +463,19 @@ export class UIScene extends Phaser.Scene {
     return { container, bg, icon, text, setColor }
   }
 
+  // A small round icon-only button (no text) for the compact portrait HUD.
+  private makeMiniButton(
+    iconKey: string,
+    color: number,
+    onClick: () => void,
+  ): { container: Phaser.GameObjects.Container; icon: Phaser.GameObjects.Image; circle: Phaser.GameObjects.Arc } {
+    const circle = this.add.circle(0, 0, 23, color, 1)
+    const icon = this.add.image(0, 0, iconKey).setDisplaySize(24, 24)
+    const hit = this.add.circle(0, 0, 30, 0x000000, 0.001).setInteractive({ useHandCursor: true })
+    hit.on('pointerup', onClick)
+    return { container: this.add.container(0, 0, [circle, icon, hit]), icon, circle }
+  }
+
   private refreshSoundButtons(): void {
     const muted = isMuted()
     const iconKey = muted ? 'ic-mute' : 'ic-sound'
@@ -445,6 +487,8 @@ export class UIScene extends Phaser.Scene {
     this.pauseSoundIcon.setTexture(iconKey).setDisplaySize(20, 20)
     this.pauseSoundText.setText(label)
     this.pauseSoundSetColor(color)
+    this.miniSoundIcon.setTexture(iconKey).setDisplaySize(24, 24)
+    this.miniSoundCircle.setFillStyle(color, 1)
   }
 
   private toggleMute(): void {
