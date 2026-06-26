@@ -166,12 +166,9 @@ export class GameScene extends Phaser.Scene {
     this.dropper.reset()
   }
 
-  // Return to the title screen, preserving a new high score if quitting mid-run.
+  // Return to the title screen. The high score is saved live (see addScore), so
+  // there's nothing extra to persist here.
   goHome(): void {
-    if (this.score > this.highScore) {
-      this.highScore = this.score
-      saveHighScore(this.highScore)
-    }
     setMusicPaused(false)
     this.scene.stop('UIScene')
     this.scene.start('TitleScene')
@@ -282,6 +279,12 @@ export class GameScene extends Phaser.Scene {
 
   private addScore(points: number): void {
     this.score += points * SCORE.multiplier
+    // The best score should reflect the current run the moment it pulls ahead,
+    // so update (and persist) it live rather than only at game over.
+    if (this.score > this.highScore) {
+      this.highScore = this.score
+      saveHighScore(this.highScore)
+    }
   }
 
   // --- Lose condition -------------------------------------------------------
@@ -332,11 +335,6 @@ export class GameScene extends Phaser.Scene {
     this.dropper.setEnabled(false)
     this.matter.world.pause()
     playGameOver()
-
-    if (this.score > this.highScore) {
-      this.highScore = this.score
-      saveHighScore(this.highScore)
-    }
   }
 
   // --- Juice ----------------------------------------------------------------
