@@ -117,3 +117,24 @@ those functions — the rest of the game already calls them.
 Intentionally small. Out of scope by design: power-ups / special bubbles /
 bombs, skins / cosmetics / shops, and online leaderboards or accounts. The
 prototype ships the core feel first.
+
+## Credits
+
+- Music: *Fizzy Pop Soda Fountain Cola* via
+  [Pixabay](https://pixabay.com/music/video-games-fizzy-pop-soda-fountain-cola-105-bpm-135486/)
+  — used under the [Pixabay Content License](https://pixabay.com/service/license-summary/).
+
+## Releases
+
+Desktop installers (Windows `.msi`/`.exe`, macOS `.dmg` for Intel + Apple
+Silicon, Linux `.AppImage`/`.deb`) are built automatically by GitHub Actions.
+Push a version tag to cut a release:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow (`.github/workflows/release.yml`) builds on each platform's native
+runner and attaches the installers to a draft GitHub Release. Builds are
+unsigned; see the desktop build notes above before distributing.

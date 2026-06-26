@@ -1,0 +1,63 @@
+name: release
+
+# Build standalone installers for every desktop platform and attach them to a
+# GitHub Release. Triggered by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# Public repo => all runners (including macOS) are free.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # also allow manual runs from the Actions tab
+
+jobs:
+  release:
+    permissions:
+      contents: write # needed to create the Release and upload assets
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest # Apple Silicon (arm64)
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-latest # Intel (x86_64)
+            args: '--target x86_64-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ contains(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build app + publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Blorb ${{ github.ref_name }}'
+          releaseBody: 'Download the installer for your platform below. Desktop builds are unsigned — see the README for notes.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
