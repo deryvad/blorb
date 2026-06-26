@@ -31,7 +31,7 @@ function styled(tag: string, css: string, text?: string): HTMLElement {
 // button sits behind it (e.g. Restart).
 function blockGameInput(el: HTMLElement): void {
   const stop = (e: Event): void => e.stopPropagation()
-  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend']) {
+  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'keydown', 'keyup', 'keypress']) {
     el.addEventListener(type, stop)
   }
 }
