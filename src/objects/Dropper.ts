@@ -44,6 +44,12 @@ export class Dropper {
     return this.nextTier
   }
 
+  // Re-point the held bubble at the current colour mode's texture (Colorblind
+  // toggle).
+  refreshTexture(): void {
+    this.held.setTexture(Fruit.textureKey(this.heldTier))
+  }
+
   private createVisuals(): void {
     // Faint vertical guide showing the drop column.
     this.guide = this.scene.add
