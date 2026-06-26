@@ -2,8 +2,9 @@ import Phaser from 'phaser'
 import { TIERS, TOP_TIER } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { isMuted, setMuted } from '../audio/sfx'
-import { saveMuted } from '../storage'
+import { saveMuted, loadPlayerName } from '../storage'
 import { openLeaderboard, leaderboardEnabled } from '../leaderboardUI'
+import { submitScore } from '../leaderboard'
 import { computeLayout, type Layout } from '../layout'
 import type { GameScene } from './GameScene'
 
@@ -54,9 +55,8 @@ export class UIScene extends Phaser.Scene {
   private goContent!: Phaser.GameObjects.Container
   private goScore!: Phaser.GameObjects.Text
   private goBest!: Phaser.GameObjects.Text
-  private restartBtn!: Phaser.GameObjects.Rectangle
-  private goMenuBtn!: Phaser.GameObjects.Text
-  private goLbBtn?: Phaser.GameObjects.Text
+  private goLbStatus!: Phaser.GameObjects.Text
+  private goPillBgs: Phaser.GameObjects.Rectangle[] = []
 
   private shownScore = -1
   private shownBest = -1
@@ -183,15 +183,13 @@ export class UIScene extends Phaser.Scene {
     if (over !== this.shownGameOver) {
       this.shownGameOver = over
       if (over) {
-        this.goScore.setText(`Score: ${g.getScore()}`)
+        const finalScore = g.getScore()
+        this.goScore.setText(`Score: ${finalScore}`)
         this.goBest.setText(`Best: ${g.getBest()}`)
-        this.restartBtn.setInteractive({ useHandCursor: true })
-        this.goMenuBtn.setInteractive({ useHandCursor: true })
-        this.goLbBtn?.setInteractive({ useHandCursor: true })
+        this.goPillBgs.forEach((bg) => bg.setInteractive({ useHandCursor: true }))
+        this.handleGameOverLeaderboard(finalScore)
       } else {
-        this.restartBtn.disableInteractive()
-        this.goMenuBtn.disableInteractive()
-        this.goLbBtn?.disableInteractive()
+        this.goPillBgs.forEach((bg) => bg.disableInteractive())
       }
       this.goDim.setVisible(over)
       this.goContent.setVisible(over)
@@ -374,42 +372,54 @@ export class UIScene extends Phaser.Scene {
   private buildGameOverOverlay(): void {
     this.goDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.62).setOrigin(0).setDepth(1999).setVisible(false)
 
+    const lb = leaderboardEnabled()
+
     const title = this.add
-      .text(0, -120, 'GAME OVER', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ffffff', fontStyle: 'bold' })
+      .text(0, -150, 'GAME OVER', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ffffff', fontStyle: 'bold' })
       .setOrigin(0.5)
-    this.goScore = this.add.text(0, -54, 'Score: 0', { fontFamily: 'sans-serif', fontSize: '24px', color: '#ffffff' }).setOrigin(0.5)
-    this.goBest = this.add.text(0, -18, 'Best: 0', { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffd43b' }).setOrigin(0.5)
-    this.restartBtn = this.add.rectangle(0, 36, 200, 54, 0x4dabf7).setOrigin(0.5)
-    const btnText = this.add
-      .text(0, 36, 'Restart', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffffff', fontStyle: 'bold' })
-      .setOrigin(0.5)
-    const hint = this.add.text(0, 78, 'or press R', { fontFamily: 'sans-serif', fontSize: '13px', color: '#aaaaaa' }).setOrigin(0.5)
-    this.goMenuBtn = this.add
-      .text(0, 120, 'Menu', { fontFamily: 'sans-serif', fontSize: '18px', color: '#ffffff', backgroundColor: '#333333', padding: { x: 16, y: 8 } })
-      .setOrigin(0.5)
+    this.goScore = this.add.text(0, -96, 'Score: 0', { fontFamily: 'sans-serif', fontSize: '24px', color: '#ffffff' }).setOrigin(0.5)
+    this.goBest = this.add.text(0, -62, 'Best: 0', { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffd43b' }).setOrigin(0.5)
+    this.goLbStatus = this.add.text(0, -28, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#9aa0b0' }).setOrigin(0.5)
 
-    this.restartBtn.on('pointerup', () => this.gameScene.restartGame())
-    this.goMenuBtn.on('pointerup', () => this.gameScene.goHome())
+    const restart = this.makePill('Restart', 0x1971c2, () => this.gameScene.restartGame())
+    restart.container.setPosition(0, 30)
 
-    const items: Phaser.GameObjects.GameObject[] = [title, this.goScore, this.goBest, this.restartBtn, btnText, hint, this.goMenuBtn]
-    if (leaderboardEnabled()) {
-      this.goLbBtn = this.add
-        .text(0, 160, '🏆 Leaderboard', {
-          fontFamily: 'sans-serif',
-          fontSize: '18px',
-          color: '#ffffff',
-          backgroundColor: '#2b8a3e',
-          padding: { x: 16, y: 8 },
-        })
-        .setOrigin(0.5)
-      this.goLbBtn.on('pointerup', () => void openLeaderboard(this.gameScene.getScore()))
-      this.goLbBtn.disableInteractive()
-      items.push(this.goLbBtn)
+    const items: Phaser.GameObjects.GameObject[] = [title, this.goScore, this.goBest, this.goLbStatus, restart.container]
+    this.goPillBgs = [restart.bg]
+
+    if (lb) {
+      const view = this.makePill('🏆  Leaderboard', 0xe8a23d, () => void openLeaderboard(this.gameScene.getScore()))
+      view.container.setPosition(0, 94)
+      items.push(view.container)
+      this.goPillBgs.push(view.bg)
     }
 
+    const menu = this.makePill('Menu', 0x6741d9, () => this.gameScene.goHome())
+    menu.container.setPosition(0, lb ? 158 : 94)
+    items.push(menu.container)
+    this.goPillBgs.push(menu.bg)
+
     this.goContent = this.add.container(0, 0, items).setDepth(2000).setVisible(false)
-    this.restartBtn.disableInteractive()
-    this.goMenuBtn.disableInteractive()
+    this.goPillBgs.forEach((bg) => bg.disableInteractive())
+  }
+
+  // On game over, post the score if a name is set (and show the result inline);
+  // first-timers get a prompt to set a name via the Leaderboard button.
+  private handleGameOverLeaderboard(score: number): void {
+    if (!leaderboardEnabled()) {
+      this.goLbStatus.setText('')
+      return
+    }
+    const name = loadPlayerName()
+    if (name === '') {
+      this.goLbStatus.setText('🏆  Tap "Leaderboard" to post your score')
+      return
+    }
+    this.goLbStatus.setText('🏆  Posting…')
+    void submitScore(name, score).then((rank) => {
+      if (!this.shownGameOver) return
+      this.goLbStatus.setText(rank ? `🏆  Posted as ${name} — rank #${rank}` : `🏆  Posted as ${name}`)
+    })
   }
 
   // A styled HUD button: rounded bg with hover, an icon, and a label.
@@ -461,6 +471,37 @@ export class UIScene extends Phaser.Scene {
       paint(c)
     }
     return { container, bg, icon, text, setColor }
+  }
+
+  // A glossy text pill (no icon) — matches the Play button style.
+  private makePill(
+    label: string,
+    color: number,
+    onClick: () => void,
+    w = 224,
+  ): { container: Phaser.GameObjects.Container; bg: Phaser.GameObjects.Rectangle } {
+    const h = 52
+    const r = h / 2
+    let current = color
+    const gfx = this.add.graphics()
+    const paint = (c: number): void => {
+      gfx.clear()
+      gfx.fillStyle(0x000000, 0.25)
+      gfx.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, r)
+      gfx.fillStyle(c, 1)
+      gfx.fillRoundedRect(-w / 2, -h / 2, w, h, r)
+      gfx.fillStyle(0xffffff, 0.22)
+      gfx.fillRoundedRect(-w / 2 + 6, -h / 2 + 4, w - 12, h * 0.4, { tl: r - 4, tr: r - 4, bl: 10, br: 10 })
+    }
+    paint(current)
+    const bg = this.add.rectangle(0, 0, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true })
+    bg.on('pointerover', () => paint(Phaser.Display.Color.IntegerToColor(current).lighten(14).color))
+    bg.on('pointerout', () => paint(current))
+    bg.on('pointerup', onClick)
+    const text = this.add
+      .text(0, 0, label, { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffffff', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    return { container: this.add.container(0, 0, [gfx, bg, text]), bg }
   }
 
   // A small round icon-only button (no text) for the compact portrait HUD.
