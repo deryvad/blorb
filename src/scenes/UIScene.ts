@@ -213,37 +213,52 @@ export class UIScene extends Phaser.Scene {
     this.goContent.setPosition(W / 2, H / 2).setScale(oScale)
   }
 
-  // Compact mobile HUD: logo top-left, score under it, icon buttons + next top-right.
+  // Compact mobile HUD: two top-corner cards (logo + score on the left, icon
+  // buttons + next on the right), leaving the centre drop column clear.
   private layoutPortrait(L: Layout): void {
     const b = L.board
     const s = L.scale
-    const pad = 14 * s
+    const top = b.y + 7 * s
+    const cardH = 100 * s
+    const r = 14 * s
+    const lcW = Phaser.Math.Clamp(b.w * 0.46, 150, 228)
+    const rcW = Phaser.Math.Clamp(b.w * 0.36, 132, 196)
+    const lcX = b.x + 7 * s
+    const rcX = b.x + b.w - 7 * s - rcW
 
-    this.leftCard.clear()
-    this.rightCard.clear()
+    for (const [card, cx, cw] of [
+      [this.leftCard, lcX, lcW],
+      [this.rightCard, rcX, rcW],
+    ] as const) {
+      card
+        .clear()
+        .fillStyle(0x1c1c26, 0.55)
+        .fillRoundedRect(cx, top, cw, cardH, r)
+        .lineStyle(1, 0xffffff, 0.06)
+        .strokeRoundedRect(cx, top, cw, cardH, r)
+    }
 
-    // Blorb logo, top-left.
+    // Left card: logo (top) + score / best (bottom).
+    const lx = lcX + 15 * s
     this.wordmark
       .setVisible(true)
-      .setPosition(b.x + pad + 58 * s, b.y + pad + 16 * s)
-      .setDisplaySize(116 * s, 116 * s * (1140 / 3663))
+      .setOrigin(0, 0.5)
+      .setPosition(lx, top + 23 * s)
+      .setDisplaySize(106 * s, 106 * s * (1140 / 3663))
+    this.scoreLabel.setOrigin(0, 0.5).setPosition(lx, top + 49 * s).setFontSize(this.fs(10, s))
+    this.scoreText.setOrigin(0, 0).setPosition(lx, top + 56 * s).setFontSize(this.fs(26, s))
+    this.bestText.setOrigin(0, 0).setPosition(lx, top + 84 * s).setFontSize(this.fs(12, s))
 
-    // Score + best, under the logo.
-    this.scoreLabel.setOrigin(0, 0.5).setPosition(b.x + pad, b.y + pad + 46 * s).setFontSize(this.fs(11, s))
-    this.scoreText.setOrigin(0, 0).setPosition(b.x + pad, b.y + pad + 54 * s).setFontSize(this.fs(26, s))
-    this.bestText.setOrigin(0, 0).setPosition(b.x + pad, b.y + pad + 86 * s).setFontSize(this.fs(13, s))
-
-    // Icon buttons, top-right row (pause · sound · home).
-    const gap = 52 * s
-    const startX = b.x + b.w - pad - 22 * s - (this.miniBtns.length - 1) * gap
+    // Right card: icon buttons (top) + next (bottom).
+    const gap = 45 * s
+    const iconStart = rcX + rcW - 26 * s - (this.miniBtns.length - 1) * gap
     this.miniBtns.forEach((c, i) =>
-      c.setVisible(true).setScale(s).setPosition(startX + i * gap, b.y + pad + 22 * s),
+      c.setVisible(true).setScale(s * 0.86).setPosition(iconStart + i * gap, top + 26 * s),
     )
-
-    // Next, under the icons (right).
-    this.nextLabel.setOrigin(0.5).setPosition(b.x + b.w - pad - 22 * s, b.y + pad + 60 * s).setFontSize(this.fs(11, s)).setVisible(true)
-    this.nextDisplay = 38 * s
-    this.nextImg.setPosition(b.x + b.w - pad - 22 * s, b.y + pad + 90 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
+    const nx = rcX + rcW / 2
+    this.nextLabel.setOrigin(0.5).setPosition(nx, top + 56 * s).setFontSize(this.fs(10, s)).setVisible(true)
+    this.nextDisplay = 30 * s
+    this.nextImg.setPosition(nx, top + 78 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
 
     // Hide landscape-only chrome.
     this.pauseBtn.setVisible(false)
