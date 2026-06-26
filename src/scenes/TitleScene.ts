@@ -36,24 +36,12 @@ export class TitleScene extends Phaser.Scene {
 
     items.push(...this.buildLadder(cx, 360))
 
-    items.push(
-      this.add
-        .text(cx, 462, 'Point & click where it should land\nKeys:  A / D  ·  ← →  ·  Space\nPause:  Esc', {
-          fontFamily: 'sans-serif',
-          fontSize: '15px',
-          color: '#aaaaaa',
-          align: 'center',
-          lineSpacing: 7,
-        })
-        .setOrigin(0.5),
-    )
-
-    items.push(...this.buildPlayButton(cx, 600))
-    items.push(...this.buildSettings(cx, 716))
-    if (leaderboardEnabled()) items.push(...this.buildLeaderboardButton(cx, 792))
+    items.push(...this.buildPlayButton(cx, 492))
+    if (leaderboardEnabled()) items.push(...this.buildLeaderboardButton(cx, 576))
+    items.push(...this.buildSettings(cx, 680))
 
     const bestText = this.add
-      .text(cx, 852, `BEST    ${loadHighScore()}`, {
+      .text(cx, 798, `BEST    ${loadHighScore()}`, {
         fontFamily: 'sans-serif',
         fontSize: '30px',
         color: '#ffd43b',
@@ -61,7 +49,7 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
     const badgeW = bestText.width + 56
-    const badge = this.add.graphics().setPosition(cx, 852)
+    const badge = this.add.graphics().setPosition(cx, 798)
     badge.fillStyle(0xffd43b, 0.1)
     badge.fillRoundedRect(-badgeW / 2, -31, badgeW, 62, 31)
     badge.lineStyle(2, 0xffd43b, 0.55)
