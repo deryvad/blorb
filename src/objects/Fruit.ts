@@ -12,6 +12,31 @@ const TIER_SHAPES = [
   'dot', 'ring', 'triangle', 'square', 'diamond', 'hexagon', 'star', 'plus', 'heart', 'flower', 'sun',
 ] as const
 
+// --- shape geometry, in a 100x100 design space (centred on 50,50) ---
+type Pt = { x: number; y: number }
+function regularPoly(n: number, cx: number, cy: number, rad: number, rot: number): Pt[] {
+  const p: Pt[] = []
+  for (let i = 0; i < n; i++) {
+    const a = rot + (i * 2 * Math.PI) / n
+    p.push({ x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) })
+  }
+  return p
+}
+function starPoly(n: number, cx: number, cy: number, ro: number, ri: number): Pt[] {
+  const p: Pt[] = []
+  for (let i = 0; i < 2 * n; i++) {
+    const r = i % 2 === 0 ? ro : ri
+    const a = -Math.PI / 2 + (i * Math.PI) / n
+    p.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) })
+  }
+  return p
+}
+const PLUS_PTS: Pt[] = [
+  { x: 43, y: 24 }, { x: 57, y: 24 }, { x: 57, y: 43 }, { x: 76, y: 43 },
+  { x: 76, y: 57 }, { x: 57, y: 57 }, { x: 57, y: 76 }, { x: 43, y: 76 },
+  { x: 43, y: 57 }, { x: 24, y: 57 }, { x: 24, y: 43 }, { x: 43, y: 43 },
+]
+
 // A Fruit owns a Matter circle body and its visual. Phaser's Matter integration
 // keeps the image locked to the body's position + rotation every frame, so we
 // never sync transforms by hand.
@@ -94,9 +119,8 @@ export class Fruit {
     })
   }
 
-  // The Colorblind variant: the same bubble, plus a tier shape DEBOSSED into it
-  // (shadow on the top edge, highlight on the bottom, transparent centre, no
-  // border) — so it reads as pressed in, not stuck on.
+  // The Colorblind variant: the same bubble, plus a translucent + outlined tier
+  // shape (so the bubble shows through — it reads as an emblem, not a hole).
   private static makeShapedTexture(scene: Phaser.Scene, tier: number, radius: number, color: number): void {
     const key = `fruit-cb-${tier}`
     if (scene.textures.exists(key)) return
@@ -121,149 +145,103 @@ export class Fruit {
     ctx.arc(r, r, r - 1, 0, Math.PI * 2)
     ctx.stroke()
 
-    Fruit.drawDebossedShape(ctx, TIER_SHAPES[tier], r)
+    Fruit.drawShape(ctx, TIER_SHAPES[tier], color, r)
     tex.refresh()
   }
 
-  // Trace one tier shape as a filled silhouette in a 100x100 design space
-  // (centred on 50,50). Caller supplies the transform + fill.
-  private static traceShape(o: CanvasRenderingContext2D, kind: string): void {
-    const P = Math.PI
-    o.beginPath()
+  // Draw one tier shape into the bubble canvas, in a tone that contrasts with the
+  // bubble (dark on light bubbles, white on dark), translucent + outlined.
+  private static drawShape(ctx: CanvasRenderingContext2D, kind: string, bubbleColor: number, r: number): void {
+    const cr = (bubbleColor >> 16) & 0xff
+    const cg = (bubbleColor >> 8) & 0xff
+    const cb = bubbleColor & 0xff
+    const base = 0.2126 * cr + 0.7152 * cg + 0.0722 * cb > 150 ? '18,20,28' : '255,255,255'
+    const fill = `rgba(${base},0.40)`
+    const stroke = `rgba(${base},0.85)`
+    const d = r * 2
+
+    ctx.save()
+    ctx.translate(0.2 * d, 0.2 * d) // shape occupies the centre ~60% of the bubble
+    ctx.scale((0.6 * d) / 100, (0.6 * d) / 100)
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.lineWidth = 6
+    ctx.fillStyle = fill
+    ctx.strokeStyle = stroke
+
+    const poly = (pts: Pt[]): void => {
+      ctx.beginPath()
+      pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)))
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+    }
+    const disc = (x: number, y: number, rad: number): void => {
+      ctx.beginPath()
+      ctx.arc(x, y, rad, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+    }
+
     switch (kind) {
+      case 'dot':
+        ctx.fillStyle = stroke
+        ctx.beginPath()
+        ctx.arc(50, 50, 21, 0, Math.PI * 2)
+        ctx.fill()
+        break
       case 'ring':
-        o.arc(50, 50, 26, 0, 2 * P, false)
-        o.arc(50, 50, 15, 0, 2 * P, true) // inner hole (annulus)
+        ctx.lineWidth = 11
+        ctx.beginPath()
+        ctx.arc(50, 50, 25, 0, Math.PI * 2)
+        ctx.stroke()
         break
       case 'triangle':
-        o.moveTo(50, 23)
-        o.lineTo(77, 71)
-        o.lineTo(23, 71)
-        o.closePath()
+        poly([{ x: 50, y: 23 }, { x: 77, y: 71 }, { x: 23, y: 71 }])
         break
       case 'square':
-        o.rect(28, 28, 44, 44)
+        ctx.beginPath()
+        ctx.rect(28, 28, 44, 44)
+        ctx.fill()
+        ctx.stroke()
         break
       case 'diamond':
-        o.moveTo(50, 20)
-        o.lineTo(78, 50)
-        o.lineTo(50, 80)
-        o.lineTo(22, 50)
-        o.closePath()
+        poly([{ x: 50, y: 20 }, { x: 78, y: 50 }, { x: 50, y: 80 }, { x: 22, y: 50 }])
         break
       case 'hexagon':
-        for (let i = 0; i < 6; i++) {
-          const a = P / 6 + (i * 2 * P) / 6
-          const x = 50 + 28 * Math.cos(a)
-          const y = 50 + 28 * Math.sin(a)
-          i ? o.lineTo(x, y) : o.moveTo(x, y)
-        }
-        o.closePath()
+        poly(regularPoly(6, 50, 50, 28, Math.PI / 6))
         break
       case 'star':
-        for (let i = 0; i < 10; i++) {
-          const rad = i % 2 === 0 ? 31 : 14
-          const a = -P / 2 + (i * P) / 5
-          const x = 50 + rad * Math.cos(a)
-          const y = 50 + rad * Math.sin(a)
-          i ? o.lineTo(x, y) : o.moveTo(x, y)
-        }
-        o.closePath()
+        poly(starPoly(5, 50, 50, 30, 14))
         break
-      case 'plus': {
-        const pts = [
-          [43, 24], [57, 24], [57, 43], [76, 43], [76, 57], [57, 57],
-          [57, 76], [43, 76], [43, 57], [24, 57], [24, 43], [43, 43],
-        ]
-        pts.forEach((p, i) => (i ? o.lineTo(p[0], p[1]) : o.moveTo(p[0], p[1])))
-        o.closePath()
+      case 'plus':
+        poly(PLUS_PTS)
+        break
+      case 'heart': {
+        const p = new Path2D('M50 75 C20 52 24 28 41 30 C49 31 50 38 50 40 C50 38 51 31 59 30 C76 28 80 52 50 75 Z')
+        ctx.fill(p)
+        ctx.stroke(p)
         break
       }
-      case 'heart':
-        o.moveTo(50, 75)
-        o.bezierCurveTo(20, 52, 24, 28, 41, 30)
-        o.bezierCurveTo(49, 31, 50, 38, 50, 40)
-        o.bezierCurveTo(50, 38, 51, 31, 59, 30)
-        o.bezierCurveTo(76, 28, 80, 52, 50, 75)
-        o.closePath()
-        break
       case 'flower':
         for (let i = 0; i < 6; i++) {
-          const a = (i * P) / 3
-          const cx = 50 + 16 * Math.cos(a)
-          const cy = 50 + 16 * Math.sin(a)
-          o.moveTo(cx + 12, cy)
-          o.arc(cx, cy, 12, 0, 2 * P)
+          const a = (i * Math.PI) / 3
+          disc(50 + 16 * Math.cos(a), 50 + 16 * Math.sin(a), 12)
         }
-        o.moveTo(62, 50)
-        o.arc(50, 50, 12, 0, 2 * P)
+        disc(50, 50, 12)
         break
       case 'sun':
-        o.moveTo(65, 50)
-        o.arc(50, 50, 15, 0, 2 * P)
+        disc(50, 50, 15)
+        ctx.lineWidth = 7
         for (let i = 0; i < 8; i++) {
-          const a = (i * P) / 4
-          o.moveTo(50 + 30 * Math.cos(a), 50 + 30 * Math.sin(a))
-          o.lineTo(50 + 18 * Math.cos(a - 0.25), 50 + 18 * Math.sin(a - 0.25))
-          o.lineTo(50 + 18 * Math.cos(a + 0.25), 50 + 18 * Math.sin(a + 0.25))
-          o.closePath()
+          const a = (i * Math.PI) / 4
+          ctx.beginPath()
+          ctx.moveTo(50 + 19 * Math.cos(a), 50 + 19 * Math.sin(a))
+          ctx.lineTo(50 + 30 * Math.cos(a), 50 + 30 * Math.sin(a))
+          ctx.stroke()
         }
         break
     }
-  }
-
-  // Composite a debossed shape onto the bubble: build it on a separate layer
-  // (so the centre-erase doesn't cut into the bubble), then stamp it on.
-  private static drawDebossedShape(ctx: CanvasRenderingContext2D, kind: string, r: number): void {
-    const d = r * 2
-    const layer = document.createElement('canvas')
-    layer.width = d
-    layer.height = d
-    const o = layer.getContext('2d')
-    if (!o) return
-
-    o.translate(0.2 * d, 0.2 * d) // shape occupies the centre ~60% of the bubble
-    o.scale((0.6 * d) / 100, (0.6 * d) / 100)
-    o.lineJoin = 'round'
-    o.lineCap = 'round'
-
-    if (kind === 'dot') {
-      // Solid recessed disc (kept solid so it stays distinct from the ring).
-      o.fillStyle = 'rgba(0,0,0,0.13)'
-      o.beginPath()
-      o.arc(50, 50, 23, 0, Math.PI * 2)
-      o.fill()
-      o.lineWidth = 7
-      o.strokeStyle = 'rgba(0,0,0,0.42)'
-      o.beginPath()
-      o.arc(50, 50, 21, Math.PI * 1.12, Math.PI * 1.88) // shadowed top rim
-      o.stroke()
-      o.strokeStyle = 'rgba(255,255,255,0.6)'
-      o.beginPath()
-      o.arc(50, 50, 21, Math.PI * 0.12, Math.PI * 0.88) // lit bottom rim
-      o.stroke()
-    } else {
-      // Highlight (bottom-right) + shadow (top-left) offset copies, then erase the
-      // centre so only the bevelled edges remain — a pressed-in groove, no border.
-      const off = 6
-      o.save()
-      o.translate(off, off)
-      o.fillStyle = 'rgba(255,255,255,0.75)'
-      Fruit.traceShape(o, kind)
-      o.fill()
-      o.restore()
-      o.save()
-      o.translate(-off, -off)
-      o.fillStyle = 'rgba(0,0,0,0.55)'
-      Fruit.traceShape(o, kind)
-      o.fill()
-      o.restore()
-      o.globalCompositeOperation = 'destination-out'
-      Fruit.traceShape(o, kind)
-      o.fill()
-      o.globalCompositeOperation = 'source-over'
-    }
-
-    ctx.drawImage(layer, 0, 0)
+    ctx.restore()
   }
 }
