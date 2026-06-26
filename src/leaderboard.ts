@@ -78,7 +78,8 @@ export async function submitScore(name: string, score: number): Promise<number |
   if (!isConfigured()) return null
   const token = await session()
   if (!token) return null
-  const member = name.trim().slice(0, 16) || 'YOU'
+  // Uppercase so a name is case-insensitive — no "Bob"/"BOB"/"bob" duplicates.
+  const member = (name.trim().slice(0, 16) || 'YOU').toUpperCase()
   try {
     const res = await fetch(`${CONFIG.baseUrl}/leaderboards/${CONFIG.leaderboardKey}/submit`, {
       method: 'POST',

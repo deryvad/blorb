@@ -101,7 +101,7 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     const inp = styled(
       'input',
       'flex:1;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.14);' +
-        'background:#14141b;color:#fff;font-size:14px;outline:none',
+        'background:#14141b;color:#fff;font-size:14px;text-transform:uppercase;outline:none',
     ) as HTMLInputElement
     inp.maxLength = 16
     inp.value = me
@@ -136,7 +136,7 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     nameRow.innerHTML = ''
     if (me === '') return
     nameRow.appendChild(styled('span', '', 'Playing as'))
-    nameRow.appendChild(styled('span', 'font-weight:700;color:#e6e6ea', me))
+    nameRow.appendChild(styled('span', 'font-weight:700;color:#e6e6ea', me.toUpperCase()))
     const change = styled('button', 'margin-left:auto;border:none;background:transparent;color:#4dabf7;cursor:pointer;font-size:13px', 'Change name')
     change.addEventListener('click', editName)
     nameRow.appendChild(change)
@@ -150,7 +150,7 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     const input = styled(
       'input',
       'flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);' +
-        'background:#14141b;color:#fff;font-size:16px;outline:none',
+        'background:#14141b;color:#fff;font-size:16px;text-transform:uppercase;outline:none',
     ) as HTMLInputElement
     input.maxLength = 16
     input.value = randomName()
@@ -234,7 +234,7 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
     const input = styled(
       'input',
       'flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);' +
-        'background:#14141b;color:#fff;font-size:16px;outline:none',
+        'background:#14141b;color:#fff;font-size:16px;text-transform:uppercase;outline:none',
     ) as HTMLInputElement
     input.maxLength = 16
     input.value = randomName()
