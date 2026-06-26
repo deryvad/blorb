@@ -55,9 +55,6 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;' +
       'background:rgba(0,0,0,.62);font-family:-apple-system,"Segoe UI",Roboto,sans-serif',
   ) as HTMLDivElement
-  overlay.addEventListener('click', (ev) => {
-    if (ev.target === overlay) closeOverlay()
-  })
 
   const panel = styled(
     'div',
@@ -160,7 +157,11 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
       'width:min(90vw,340px);background:#1c1c26;border:1px solid rgba(255,255,255,.1);border-radius:16px;' +
         'padding:18px;color:#e6e6ea;box-shadow:0 22px 60px rgba(0,0,0,.55)',
     )
-    panel.appendChild(styled('div', 'font-size:18px;font-weight:800;margin-bottom:4px', '🏆  Post to the leaderboard'))
+    const header = styled('div', 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px')
+    header.appendChild(styled('div', 'font-size:18px;font-weight:800', '🏆  Post to the leaderboard'))
+    const xBtn = styled('button', 'border:none;background:transparent;color:#9aa0b0;font-size:22px;cursor:pointer;line-height:1', '✕')
+    header.appendChild(xBtn)
+    panel.appendChild(header)
     panel.appendChild(styled('div', 'font-size:14px;color:#9aa0b0;margin-bottom:12px', `You scored ${score} — pick a name:`))
     const row = styled('div', 'display:flex;gap:8px')
     const input = styled(
@@ -178,12 +179,6 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
     row.appendChild(input)
     row.appendChild(post)
     panel.appendChild(row)
-    const skip = styled(
-      'button',
-      'display:block;margin:12px auto 0;border:none;background:transparent;color:#7a8090;font-size:13px;cursor:pointer',
-      'Maybe later',
-    )
-    panel.appendChild(skip)
     ov.appendChild(panel)
     document.body.appendChild(ov)
     setTimeout(() => input.focus(), 50)
@@ -208,9 +203,6 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') void doPost()
     })
-    skip.addEventListener('click', () => done(null))
-    ov.addEventListener('click', (e) => {
-      if (e.target === ov) done(null)
-    })
+    xBtn.addEventListener('click', () => done(null))
   })
 }
