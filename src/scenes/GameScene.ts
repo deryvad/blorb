@@ -15,7 +15,6 @@ import { Dropper } from '../objects/Dropper'
 import { playMerge, playDrop, playJackpot, playGameOver, setMusicPaused } from '../audio/sfx'
 import { loadHighScore, saveHighScore } from '../storage'
 import { computeLayout } from '../layout'
-import { onColorblindChange } from '../colorblind'
 
 // The playfield: container, dropper, fruit, the merge loop, and the lose/restart
 // game loop. The HUD and overlays live in UIScene, which reads this scene's
@@ -80,18 +79,7 @@ export class GameScene extends Phaser.Scene {
 
     this.applyLayout()
     this.scale.on('resize', this.applyLayout, this)
-
-    const offColorblind = onColorblindChange(() => this.refreshBubbleTextures())
-    this.events.once('shutdown', () => {
-      this.scale.off('resize', this.applyLayout, this)
-      offColorblind()
-    })
-  }
-
-  // Re-skin every live bubble (and the held one) when Colorblind mode toggles.
-  private refreshBubbleTextures(): void {
-    for (const f of this.fruits) f.image.setTexture(Fruit.textureKey(f.tier))
-    this.dropper.refreshTexture()
+    this.events.once('shutdown', () => this.scale.off('resize', this.applyLayout, this))
   }
 
   // Frame the fixed 540×960 world into the centered board rect for the current

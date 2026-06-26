@@ -3,15 +3,11 @@ import { GAME, TIERS, TOP_TIER } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { isMuted, setMuted, getMasterVolume, setMasterVolume } from '../audio/sfx'
 import { loadHighScore, saveMuted, saveVolume } from '../storage'
-import { isColorblind, setColorblind, onColorblindChange } from '../colorblind'
 
 // Title screen. Built at a fixed 540×960 "design" size inside a container, then
 // centered + scaled to fit any window (responsive) in applyLayout().
 export class TitleScene extends Phaser.Scene {
   private menu!: Phaser.GameObjects.Container
-  private ladderImgs: Phaser.GameObjects.Image[] = []
-  private ladderSizes: number[] = []
-  private refreshCbPill: () => void = () => {}
 
   constructor() {
     super('TitleScene')
@@ -74,17 +70,7 @@ export class TitleScene extends Phaser.Scene {
 
     this.applyLayout()
     this.scale.on('resize', this.applyLayout, this)
-
-    const offColorblind = onColorblindChange(() => {
-      this.ladderImgs.forEach((img, t) =>
-        img.setTexture(Fruit.textureKey(t)).setDisplaySize(this.ladderSizes[t], this.ladderSizes[t]),
-      )
-      this.refreshCbPill()
-    })
-    this.events.once('shutdown', () => {
-      this.scale.off('resize', this.applyLayout, this)
-      offColorblind()
-    })
+    this.events.once('shutdown', () => this.scale.off('resize', this.applyLayout, this))
   }
 
   // Center + scale the fixed 540×960 menu design into the current window.
@@ -105,14 +91,10 @@ export class TitleScene extends Phaser.Scene {
     const sizes = TIERS.map((_, t) => minD + (maxD - minD) * (t / TOP_TIER))
     const totalW = sizes.reduce((a, b) => a + b, 0) + gap * (TIERS.length - 1)
 
-    this.ladderImgs = []
-    this.ladderSizes = sizes
     let x = cx - totalW / 2
     TIERS.forEach((_, t) => {
       const d = sizes[t]
-      const img = this.add.image(x + d / 2, y, Fruit.textureKey(t)).setDisplaySize(d, d)
-      this.ladderImgs.push(img)
-      out.push(img)
+      out.push(this.add.image(x + d / 2, y, Fruit.textureKey(t)).setDisplaySize(d, d))
       x += d + gap
     })
     return out
@@ -231,45 +213,6 @@ export class TitleScene extends Phaser.Scene {
     vhit.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (p.isDown) setVol(p.x)
     })
-
-    // Colorblind mode toggle, on its own row below the sound/volume controls.
-    const cbY = y + 52
-    const cbW = 230
-    const cbH = 44
-    const cbR = cbH / 2
-    const cbColorFor = (): number => (isColorblind() ? 0x2b8a3e : 0x4a4f5c)
-    const cbGfx = this.add.graphics().setPosition(cx, cbY)
-    const cbPaint = (c: number): void => {
-      cbGfx.clear()
-      cbGfx.fillStyle(0x000000, 0.22)
-      cbGfx.fillRoundedRect(-cbW / 2, -cbH / 2 + 4, cbW, cbH, cbR)
-      cbGfx.fillStyle(c, 1)
-      cbGfx.fillRoundedRect(-cbW / 2, -cbH / 2, cbW, cbH, cbR)
-      cbGfx.fillStyle(0xffffff, 0.22)
-      cbGfx.fillRoundedRect(-cbW / 2 + 6, -cbH / 2 + 4, cbW - 12, cbH * 0.4, { tl: cbR - 4, tr: cbR - 4, bl: 9, br: 9 })
-    }
-    cbPaint(cbColorFor())
-    out.push(cbGfx)
-
-    const cbIcon = this.add.image(cx - cbW / 2 + 26, cbY, 'ic-cb').setDisplaySize(20, 20)
-    const cbText = this.add
-      .text(cx - cbW / 2 + 48, cbY, isColorblind() ? 'Colorblind: On' : 'Colorblind: Off', {
-        fontFamily: 'sans-serif',
-        fontSize: '16px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0, 0.5)
-    this.refreshCbPill = (): void => {
-      cbText.setText(isColorblind() ? 'Colorblind: On' : 'Colorblind: Off')
-      cbPaint(cbColorFor())
-    }
-
-    const cbHit = this.add.rectangle(cx, cbY, cbW, cbH, 0x000000, 0.001).setInteractive({ useHandCursor: true })
-    cbHit.on('pointerover', () => cbPaint(Phaser.Display.Color.IntegerToColor(cbColorFor()).lighten(14).color))
-    cbHit.on('pointerout', () => cbPaint(cbColorFor()))
-    cbHit.on('pointerup', () => setColorblind(!isColorblind()))
-    out.push(cbIcon, cbText, cbHit)
 
     return out
   }

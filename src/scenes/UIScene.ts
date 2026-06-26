@@ -3,7 +3,6 @@ import { TIERS, TOP_TIER } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { isMuted, setMuted } from '../audio/sfx'
 import { saveMuted } from '../storage'
-import { isColorblind, setColorblind, onColorblindChange } from '../colorblind'
 import { computeLayout, type Layout } from '../layout'
 import type { GameScene } from './GameScene'
 
@@ -46,8 +45,6 @@ export class UIScene extends Phaser.Scene {
   private pauseSoundIcon!: Phaser.GameObjects.Image
   private pauseSoundText!: Phaser.GameObjects.Text
   private pauseSoundSetColor!: (c: number) => void
-  private pauseCbText!: Phaser.GameObjects.Text
-  private pauseCbSetColor!: (c: number) => void
 
   private goDim!: Phaser.GameObjects.Rectangle
   private goContent!: Phaser.GameObjects.Container
@@ -127,15 +124,7 @@ export class UIScene extends Phaser.Scene {
 
     this.applyLayout()
     this.scale.on('resize', this.applyLayout, this)
-
-    const offColorblind = onColorblindChange(() => {
-      this.refreshBubbleTextures()
-      this.refreshColorblindButton()
-    })
-    this.events.once('shutdown', () => {
-      this.scale.off('resize', this.applyLayout, this)
-      offColorblind()
-    })
+    this.events.once('shutdown', () => this.scale.off('resize', this.applyLayout, this))
   }
 
   update(): void {
@@ -317,11 +306,10 @@ export class UIScene extends Phaser.Scene {
       .text(0, -116, 'PAUSED', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ffffff', fontStyle: 'bold' })
       .setOrigin(0.5)
 
-    const W = 176
     const resume = this.makeIconButton('ic-play', 'Resume', 0x1971c2, () => {
       if (this.gameScene.isPaused()) this.gameScene.togglePause()
-    }, W)
-    resume.container.setPosition(0, -58)
+    })
+    resume.container.setPosition(0, -34)
 
     const muted = isMuted()
     const sound = this.makeIconButton(
@@ -332,33 +320,20 @@ export class UIScene extends Phaser.Scene {
         this.toggleMute()
         this.refreshSoundButtons()
       },
-      W,
     )
-    sound.container.setPosition(0, 0)
+    sound.container.setPosition(0, 24)
     this.pauseSoundIcon = sound.icon
     this.pauseSoundText = sound.text
     this.pauseSoundSetColor = sound.setColor
 
-    const cbOn = isColorblind()
-    const cb = this.makeIconButton(
-      'ic-cb',
-      cbOn ? 'Colorblind ✓' : 'Colorblind',
-      cbOn ? 0x2b8a3e : 0x4a4f5c,
-      () => setColorblind(!isColorblind()),
-      W,
-    )
-    cb.container.setPosition(0, 58)
-    this.pauseCbText = cb.text
-    this.pauseCbSetColor = cb.setColor
+    const menu = this.makeIconButton('ic-home', 'Menu', 0x6741d9, () => this.gameScene.goHome())
+    menu.container.setPosition(0, 82)
 
-    const menu = this.makeIconButton('ic-home', 'Menu', 0x6741d9, () => this.gameScene.goHome(), W)
-    menu.container.setPosition(0, 116)
-
-    this.pauseButtons = [resume.bg, sound.bg, cb.bg, menu.bg]
+    this.pauseButtons = [resume.bg, sound.bg, menu.bg]
     this.pauseButtons.forEach((b) => b.disableInteractive())
 
     this.pauseContent = this.add
-      .container(0, 0, [title, resume.container, sound.container, cb.container, menu.container])
+      .container(0, 0, [title, resume.container, sound.container, menu.container])
       .setDepth(2000)
       .setVisible(false)
   }
@@ -397,7 +372,6 @@ export class UIScene extends Phaser.Scene {
     label: string,
     color: number,
     onClick: () => void,
-    width = 136,
   ): {
     container: Phaser.GameObjects.Container
     bg: Phaser.GameObjects.Rectangle
@@ -405,7 +379,7 @@ export class UIScene extends Phaser.Scene {
     text: Phaser.GameObjects.Text
     setColor: (c: number) => void
   } {
-    const w = width
+    const w = 136
     const h = 46
     const r = h / 2 // full pill — bubbly, not boxy
     let current = color
@@ -460,18 +434,5 @@ export class UIScene extends Phaser.Scene {
     const muted = !isMuted()
     setMuted(muted)
     saveMuted(muted)
-  }
-
-  private refreshColorblindButton(): void {
-    const on = isColorblind()
-    this.pauseCbText.setText(on ? 'Colorblind ✓' : 'Colorblind')
-    this.pauseCbSetColor(on ? 0x2b8a3e : 0x4a4f5c)
-  }
-
-  // Swap the NEXT preview + ladder previews to the current colour mode's set.
-  private refreshBubbleTextures(): void {
-    this.ladderImgs.forEach((img, t) => img.setTexture(Fruit.textureKey(t)))
-    this.nextImg.setTexture(Fruit.textureKey(Math.max(0, this.shownNext)))
-    this.applyLayout()
   }
 }

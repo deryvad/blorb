@@ -87,13 +87,5 @@ export class BootScene extends Phaser.Scene {
       g.lineBetween(16, 8, 22, 16)
       g.lineBetween(22, 8, 16, 16)
     })
-
-    // Colorblind toggle: a bubble with a shape inside.
-    make('ic-cb', (g) => {
-      g.lineStyle(2, 0xffffff, 1)
-      g.strokeCircle(12, 12, 9)
-      g.fillStyle(0xffffff, 1)
-      g.fillTriangle(12, 8, 7, 16, 17, 16)
-    })
   }
 }

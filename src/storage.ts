@@ -61,21 +61,3 @@ export function saveVolume(volume: number): void {
     // fail silently
   }
 }
-
-const COLORBLIND_KEY = 'merge-puzzle:colorblind'
-
-export function loadColorblind(): boolean {
-  try {
-    return localStorage.getItem(COLORBLIND_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-export function saveColorblind(on: boolean): void {
-  try {
-    localStorage.setItem(COLORBLIND_KEY, on ? '1' : '0')
-  } catch {
-    // fail silently
-  }
-}
