@@ -50,6 +50,16 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Load release notes
+        id: notes
+        shell: bash
+        run: |
+          {
+            echo 'body<<RELEASE_NOTES_EOF'
+            cat .github/RELEASE_NOTES.md
+            echo 'RELEASE_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build app + publish release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -57,14 +67,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Blorb ${{ github.ref_name }}'
-          releaseBody: |
-            **Which file?**  🪟 Windows → the `*-setup.exe`  ·  🍎 Mac (Apple Silicon) → `*_aarch64.dmg`  ·  🍎 Mac (Intel) → `*_x64.dmg`  ·  🐧 Linux → `*_amd64.AppImage` (or `.deb` / `.rpm`).
-
-            **macOS says "damaged"?** The app isn't notarized yet — it's fine. Drag Blorb to Applications, then run in Terminal: `xattr -dr com.apple.quarantine /Applications/Blorb.app`
-
-            **Windows SmartScreen?** Click *More info → Run anyway*.
-
-            *The `*.app.tar.gz` files are for the auto-updater — ignore them.*
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
