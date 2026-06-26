@@ -5,6 +5,13 @@ import { TIERS, PHYSICS } from '../config/tuning'
 // merge guard to process each collision pair exactly once).
 let nextFruitId = 1
 
+// One distinct shape per tier, baked into the bubble. This is a colour-blind
+// accessibility aid: tiers stay readable by SHAPE even when colour is lost (and
+// it gives the bubbles a bit of Suika-style character). Index === tier.
+const TIER_SHAPES = [
+  'dot', 'ring', 'triangle', 'square', 'diamond', 'hexagon', 'star', 'plus', 'heart', 'flower', 'sun',
+] as const
+
 // A Fruit owns a Matter circle body and its visual. Phaser's Matter integration
 // keeps the image locked to the body's position + rotation every frame, so we
 // never sync transforms by hand.
@@ -78,8 +85,122 @@ export class Fruit {
       g.fillCircle(def.radius * 0.68, def.radius * 0.68, def.radius * 0.32)
       g.lineStyle(2, 0x000000, 0.22)
       g.strokeCircle(def.radius, def.radius, def.radius - 1)
+
+      // Tier shape — a colour-independent channel. Drawn in a tone that
+      // contrasts with the bubble (dark on light bubbles, white on dark).
+      const kind = TIER_SHAPES[tier]
+      if (kind) {
+        const r = (def.color >> 16) & 0xff
+        const gg = (def.color >> 8) & 0xff
+        const b = def.color & 0xff
+        const light = 0.2126 * r + 0.7152 * gg + 0.0722 * b > 150
+        Fruit.drawShape(g, kind, def.radius, def.radius, def.radius * 0.52, light ? 0x141620 : 0xffffff, light ? 0.82 : 0.92)
+      }
+
       g.generateTexture(key, d, d)
       g.destroy()
     })
+  }
+
+  // --- Tier shapes ------------------------------------------------------------
+
+  private static regularPoly(cx: number, cy: number, n: number, r: number, rot: number): Phaser.Types.Math.Vector2Like[] {
+    const pts: Phaser.Types.Math.Vector2Like[] = []
+    for (let i = 0; i < n; i++) {
+      const a = rot + (i * 2 * Math.PI) / n
+      pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) })
+    }
+    return pts
+  }
+
+  private static starPoly(cx: number, cy: number, n: number, ro: number, ri: number): Phaser.Types.Math.Vector2Like[] {
+    const pts: Phaser.Types.Math.Vector2Like[] = []
+    for (let i = 0; i < 2 * n; i++) {
+      const r = i % 2 === 0 ? ro : ri
+      const a = -Math.PI / 2 + (i * Math.PI) / n
+      pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) })
+    }
+    return pts
+  }
+
+  // Draw one tier shape centred at (cx, cy), sized to extent `s`, into `g`.
+  private static drawShape(
+    g: Phaser.GameObjects.Graphics,
+    kind: string,
+    cx: number,
+    cy: number,
+    s: number,
+    color: number,
+    alpha: number,
+  ): void {
+    g.fillStyle(color, alpha)
+    switch (kind) {
+      case 'dot':
+        g.fillCircle(cx, cy, s * 0.9)
+        break
+      case 'ring':
+        g.lineStyle(s * 0.42, color, alpha)
+        g.strokeCircle(cx, cy, s * 0.72)
+        break
+      case 'triangle':
+        g.fillPoints(Fruit.regularPoly(cx, cy, 3, s, -Math.PI / 2), true)
+        break
+      case 'square': {
+        const w = s * 1.46
+        g.fillRoundedRect(cx - w / 2, cy - w / 2, w, w, s * 0.2)
+        break
+      }
+      case 'diamond':
+        g.fillPoints(Fruit.regularPoly(cx, cy, 4, s * 1.08, -Math.PI / 2), true)
+        break
+      case 'hexagon':
+        g.fillPoints(Fruit.regularPoly(cx, cy, 6, s, Math.PI / 6), true)
+        break
+      case 'star':
+        g.fillPoints(Fruit.starPoly(cx, cy, 5, s, s * 0.44), true)
+        break
+      case 'plus': {
+        const a = s * 0.38
+        const b = s
+        g.fillPoints(
+          [
+            { x: cx - a, y: cy - b }, { x: cx + a, y: cy - b }, { x: cx + a, y: cy - a }, { x: cx + b, y: cy - a },
+            { x: cx + b, y: cy + a }, { x: cx + a, y: cy + a }, { x: cx + a, y: cy + b }, { x: cx - a, y: cy + b },
+            { x: cx - a, y: cy + a }, { x: cx - b, y: cy + a }, { x: cx - b, y: cy - a }, { x: cx - a, y: cy - a },
+          ],
+          true,
+        )
+        break
+      }
+      case 'heart': {
+        const lobe = s * 0.5
+        const ly = cy - s * 0.16
+        g.fillCircle(cx - lobe * 0.72, ly, lobe)
+        g.fillCircle(cx + lobe * 0.72, ly, lobe)
+        g.fillTriangle(cx - s * 0.96, ly + lobe * 0.2, cx + s * 0.96, ly + lobe * 0.2, cx, cy + s)
+        break
+      }
+      case 'flower': {
+        const petal = s * 0.46
+        for (let i = 0; i < 6; i++) {
+          const a = (i * Math.PI) / 3
+          g.fillCircle(cx + Math.cos(a) * s * 0.6, cy + Math.sin(a) * s * 0.6, petal)
+        }
+        g.fillCircle(cx, cy, petal)
+        break
+      }
+      case 'sun': {
+        g.fillCircle(cx, cy, s * 0.56)
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4
+          g.fillTriangle(
+            cx + Math.cos(a) * s * 1.06, cy + Math.sin(a) * s * 1.06,
+            cx + Math.cos(a - 0.22) * s * 0.6, cy + Math.sin(a - 0.22) * s * 0.6,
+            cx + Math.cos(a + 0.22) * s * 0.6, cy + Math.sin(a + 0.22) * s * 0.6,
+          )
+        }
+        break
+      }
+    }
   }
 }
