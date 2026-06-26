@@ -140,3 +140,77 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
   status.textContent = me !== '' ? `Playing as ${me}` : ''
   await refresh()
 }
+
+// A small inline form to post a score the first time (no saved name yet). Pops
+// automatically on game over so there's no button to hunt for. Resolves with the
+// result, or null if dismissed.
+export function promptNameAndSubmit(score: number): Promise<{ name: string; rank: number | null } | null> {
+  return new Promise((resolve) => {
+    if (!isConfigured()) {
+      resolve(null)
+      return
+    }
+    const ov = styled(
+      'div',
+      'position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;' +
+        'background:rgba(0,0,0,.55);font-family:-apple-system,"Segoe UI",Roboto,sans-serif',
+    ) as HTMLDivElement
+    const panel = styled(
+      'div',
+      'width:min(90vw,340px);background:#1c1c26;border:1px solid rgba(255,255,255,.1);border-radius:16px;' +
+        'padding:18px;color:#e6e6ea;box-shadow:0 22px 60px rgba(0,0,0,.55)',
+    )
+    panel.appendChild(styled('div', 'font-size:18px;font-weight:800;margin-bottom:4px', '🏆  Post to the leaderboard'))
+    panel.appendChild(styled('div', 'font-size:14px;color:#9aa0b0;margin-bottom:12px', `You scored ${score} — pick a name:`))
+    const row = styled('div', 'display:flex;gap:8px')
+    const input = styled(
+      'input',
+      'flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);' +
+        'background:#14141b;color:#fff;font-size:16px;outline:none',
+    ) as HTMLInputElement
+    input.maxLength = 12
+    input.placeholder = 'Your name'
+    const post = styled(
+      'button',
+      'padding:11px 18px;border:none;border-radius:10px;background:#2b8a3e;color:#fff;font-weight:700;cursor:pointer',
+      'Post',
+    ) as HTMLButtonElement
+    row.appendChild(input)
+    row.appendChild(post)
+    panel.appendChild(row)
+    const skip = styled(
+      'button',
+      'display:block;margin:12px auto 0;border:none;background:transparent;color:#7a8090;font-size:13px;cursor:pointer',
+      'Maybe later',
+    )
+    panel.appendChild(skip)
+    ov.appendChild(panel)
+    document.body.appendChild(ov)
+    setTimeout(() => input.focus(), 50)
+
+    const done = (result: { name: string; rank: number | null } | null): void => {
+      ov.remove()
+      resolve(result)
+    }
+    const doPost = async (): Promise<void> => {
+      const n = input.value.trim()
+      if (n === '') {
+        input.focus()
+        return
+      }
+      savePlayerName(n)
+      post.textContent = 'Posting…'
+      post.disabled = true
+      const rank = await submitScore(n, score)
+      done({ name: n, rank })
+    }
+    post.addEventListener('click', () => void doPost())
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') void doPost()
+    })
+    skip.addEventListener('click', () => done(null))
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) done(null)
+    })
+  })
+}

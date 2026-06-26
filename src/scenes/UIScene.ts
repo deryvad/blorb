@@ -3,7 +3,7 @@ import { TIERS, TOP_TIER } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { isMuted, setMuted } from '../audio/sfx'
 import { saveMuted, loadPlayerName } from '../storage'
-import { openLeaderboard, leaderboardEnabled } from '../leaderboardUI'
+import { openLeaderboard, leaderboardEnabled, promptNameAndSubmit } from '../leaderboardUI'
 import { submitScore } from '../leaderboard'
 import { computeLayout, type Layout } from '../layout'
 import type { GameScene } from './GameScene'
@@ -331,7 +331,7 @@ export class UIScene extends Phaser.Scene {
   // --- Overlays -------------------------------------------------------------
 
   private buildPauseOverlay(): void {
-    this.pauseDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.6).setOrigin(0).setDepth(1999).setVisible(false)
+    this.pauseDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.84).setOrigin(0).setDepth(1999).setVisible(false)
 
     const title = this.add
       .text(0, -116, 'PAUSED', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ffffff', fontStyle: 'bold' })
@@ -370,7 +370,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildGameOverOverlay(): void {
-    this.goDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.62).setOrigin(0).setDepth(1999).setVisible(false)
+    this.goDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.86).setOrigin(0).setDepth(1999).setVisible(false)
 
     const lb = leaderboardEnabled()
 
@@ -412,7 +412,16 @@ export class UIScene extends Phaser.Scene {
     }
     const name = loadPlayerName()
     if (name === '') {
-      this.goLbStatus.setText('🏆  Tap "Leaderboard" to post your score')
+      // First time: pop a small name form right away — no button to hunt for.
+      this.goLbStatus.setText('🏆  Post your score…')
+      void promptNameAndSubmit(score).then((res) => {
+        if (!this.shownGameOver) return
+        if (res) {
+          this.goLbStatus.setText(res.rank ? `🏆  Posted as ${res.name} — rank #${res.rank}` : `🏆  Posted as ${res.name}`)
+        } else {
+          this.goLbStatus.setText('🏆  Tap "Leaderboard" to post your score')
+        }
+      })
       return
     }
     this.goLbStatus.setText('🏆  Posting…')
