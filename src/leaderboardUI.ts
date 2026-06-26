@@ -26,6 +26,16 @@ function styled(tag: string, css: string, text?: string): HTMLElement {
   return e
 }
 
+// Stop pointer/touch events on a dialog from bubbling to Phaser's window-level
+// input listeners — otherwise a click on the dialog also fires whatever game
+// button sits behind it (e.g. Restart).
+function blockGameInput(el: HTMLElement): void {
+  const stop = (e: Event): void => e.stopPropagation()
+  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend']) {
+    el.addEventListener(type, stop)
+  }
+}
+
 function renderRows(container: HTMLElement, entries: LeaderboardEntry[], me: string): void {
   container.innerHTML = ''
   if (entries.length === 0) {
@@ -55,6 +65,7 @@ export async function openLeaderboard(submitValue?: number): Promise<void> {
     'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;' +
       'background:rgba(0,0,0,.62);font-family:-apple-system,"Segoe UI",Roboto,sans-serif',
   ) as HTMLDivElement
+  blockGameInput(overlay)
 
   const panel = styled(
     'div',
@@ -152,6 +163,7 @@ export function promptNameAndSubmit(score: number): Promise<{ name: string; rank
       'position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;' +
         'background:rgba(0,0,0,.55);font-family:-apple-system,"Segoe UI",Roboto,sans-serif',
     ) as HTMLDivElement
+    blockGameInput(ov)
     const panel = styled(
       'div',
       'width:min(90vw,340px);background:#1c1c26;border:1px solid rgba(255,255,255,.1);border-radius:16px;' +
