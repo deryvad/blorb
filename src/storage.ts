@@ -61,3 +61,21 @@ export function saveVolume(volume: number): void {
     // fail silently
   }
 }
+
+const PLAYER_NAME_KEY = 'merge-puzzle:playerName'
+
+export function loadPlayerName(): string {
+  try {
+    return localStorage.getItem(PLAYER_NAME_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+export function savePlayerName(name: string): void {
+  try {
+    localStorage.setItem(PLAYER_NAME_KEY, name)
+  } catch {
+    // fail silently
+  }
+}

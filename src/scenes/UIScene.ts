@@ -3,6 +3,7 @@ import { TIERS, TOP_TIER } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { isMuted, setMuted } from '../audio/sfx'
 import { saveMuted } from '../storage'
+import { openLeaderboard, leaderboardEnabled } from '../leaderboardUI'
 import { computeLayout, type Layout } from '../layout'
 import type { GameScene } from './GameScene'
 
@@ -52,6 +53,7 @@ export class UIScene extends Phaser.Scene {
   private goBest!: Phaser.GameObjects.Text
   private restartBtn!: Phaser.GameObjects.Rectangle
   private goMenuBtn!: Phaser.GameObjects.Text
+  private goLbBtn?: Phaser.GameObjects.Text
 
   private shownScore = -1
   private shownBest = -1
@@ -170,9 +172,11 @@ export class UIScene extends Phaser.Scene {
         this.goBest.setText(`Best: ${g.getBest()}`)
         this.restartBtn.setInteractive({ useHandCursor: true })
         this.goMenuBtn.setInteractive({ useHandCursor: true })
+        this.goLbBtn?.setInteractive({ useHandCursor: true })
       } else {
         this.restartBtn.disableInteractive()
         this.goMenuBtn.disableInteractive()
+        this.goLbBtn?.disableInteractive()
       }
       this.goDim.setVisible(over)
       this.goContent.setVisible(over)
@@ -358,10 +362,23 @@ export class UIScene extends Phaser.Scene {
     this.restartBtn.on('pointerup', () => this.gameScene.restartGame())
     this.goMenuBtn.on('pointerup', () => this.gameScene.goHome())
 
-    this.goContent = this.add
-      .container(0, 0, [title, this.goScore, this.goBest, this.restartBtn, btnText, hint, this.goMenuBtn])
-      .setDepth(2000)
-      .setVisible(false)
+    const items: Phaser.GameObjects.GameObject[] = [title, this.goScore, this.goBest, this.restartBtn, btnText, hint, this.goMenuBtn]
+    if (leaderboardEnabled()) {
+      this.goLbBtn = this.add
+        .text(0, 160, '🏆 Leaderboard', {
+          fontFamily: 'sans-serif',
+          fontSize: '18px',
+          color: '#ffffff',
+          backgroundColor: '#2b8a3e',
+          padding: { x: 16, y: 8 },
+        })
+        .setOrigin(0.5)
+      this.goLbBtn.on('pointerup', () => void openLeaderboard(this.gameScene.getScore()))
+      this.goLbBtn.disableInteractive()
+      items.push(this.goLbBtn)
+    }
+
+    this.goContent = this.add.container(0, 0, items).setDepth(2000).setVisible(false)
     this.restartBtn.disableInteractive()
     this.goMenuBtn.disableInteractive()
   }

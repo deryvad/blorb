@@ -3,6 +3,7 @@ import { GAME, TIERS, TOP_TIER } from '../config/tuning'
 import { Fruit } from '../objects/Fruit'
 import { isMuted, setMuted, getMasterVolume, setMasterVolume } from '../audio/sfx'
 import { loadHighScore, saveMuted, saveVolume } from '../storage'
+import { openLeaderboard, leaderboardEnabled } from '../leaderboardUI'
 
 // Title screen. Built at a fixed 540×960 "design" size inside a container, then
 // centered + scaled to fit any window (responsive) in applyLayout().
@@ -49,6 +50,7 @@ export class TitleScene extends Phaser.Scene {
 
     items.push(...this.buildPlayButton(cx, 600))
     items.push(...this.buildSettings(cx, 716))
+    if (leaderboardEnabled()) items.push(...this.buildLeaderboardButton(cx, 792))
 
     const bestText = this.add
       .text(cx, 852, `BEST    ${loadHighScore()}`, {
@@ -126,6 +128,37 @@ export class TitleScene extends Phaser.Scene {
 
     const label = this.add
       .text(cx, y, '▶  PLAY', { fontFamily: 'sans-serif', fontSize: '26px', color: '#ffffff', fontStyle: 'bold' })
+      .setOrigin(0.5)
+
+    return [gfx, hit, label]
+  }
+
+  private buildLeaderboardButton(cx: number, y: number): Phaser.GameObjects.GameObject[] {
+    const w = 224
+    const h = 52
+    const r = h / 2
+    const color = 0xe8a23d
+    const hover = Phaser.Display.Color.IntegerToColor(color).lighten(14).color
+
+    const gfx = this.add.graphics().setPosition(cx, y)
+    const paint = (c: number): void => {
+      gfx.clear()
+      gfx.fillStyle(0x000000, 0.25)
+      gfx.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, r)
+      gfx.fillStyle(c, 1)
+      gfx.fillRoundedRect(-w / 2, -h / 2, w, h, r)
+      gfx.fillStyle(0xffffff, 0.22)
+      gfx.fillRoundedRect(-w / 2 + 6, -h / 2 + 4, w - 12, h * 0.4, { tl: r - 4, tr: r - 4, bl: 10, br: 10 })
+    }
+    paint(color)
+
+    const hit = this.add.rectangle(cx, y, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true })
+    hit.on('pointerover', () => paint(hover))
+    hit.on('pointerout', () => paint(color))
+    hit.on('pointerup', () => void openLeaderboard())
+
+    const label = this.add
+      .text(cx, y, '🏆  Leaderboard', { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffffff', fontStyle: 'bold' })
       .setOrigin(0.5)
 
     return [gfx, hit, label]
