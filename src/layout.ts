@@ -29,10 +29,15 @@ export function computeLayout(winW: number, winH: number): Layout {
   const w = BW * scale
   const h = BH * scale
   const x = (winW - w) / 2
-  const y = (winH - h) / 2
   const gutter = (winW - w) / 2
 
   const mode: LayoutMode = gutter >= LANDSCAPE_GUTTER ? 'landscape' : 'portrait'
+
+  // Portrait (phones): reserve a band at the top for the fixed HUD header, then
+  // drop the board just below it so the held bubble clears the header; spare
+  // height falls to the bottom. Landscape: keep it vertically centred.
+  const headerBand = Math.min(Math.max(winW * 0.2, 64), 116)
+  const y = mode === 'portrait' ? Math.min(headerBand, winH - h) : (winH - h) / 2
 
   return { mode, scale, board: { x, y, w, h }, gutter }
 }

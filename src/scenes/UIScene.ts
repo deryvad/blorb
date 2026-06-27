@@ -214,41 +214,47 @@ export class UIScene extends Phaser.Scene {
   }
 
   // Fixed single-row mobile header bar: logo · buttons · next · score.
+  // Sized relative to board WIDTH (not the small design-scale s) so touch targets
+  // and text stay properly large on a phone.
   private layoutPortrait(L: Layout): void {
     const b = L.board
-    const s = L.scale
-    const headerTop = b.y + 6 * s
-    const headerH = 64 * s
-    const cy = headerTop + headerH / 2
+    const hh = Phaser.Math.Clamp(b.w * 0.17, 58, 98) // header height
+    const top = Math.max(4, (b.y - hh) / 2) // sit in the reserved band above the board
+    const cy = top + hh / 2
 
-    // One full-width header card (rightCard unused in portrait).
+    // One full-width header card pinned to the top (rightCard unused in portrait).
     this.leftCard
       .clear()
-      .fillStyle(0x1c1c26, 0.55)
-      .fillRoundedRect(b.x + 6 * s, headerTop, b.w - 12 * s, headerH, 14 * s)
-      .lineStyle(1, 0xffffff, 0.06)
-      .strokeRoundedRect(b.x + 6 * s, headerTop, b.w - 12 * s, headerH, 14 * s)
+      .fillStyle(0x1c1c26, 0.62)
+      .fillRoundedRect(b.x + 4, top, b.w - 8, hh, 16)
+      .lineStyle(1, 0xffffff, 0.07)
+      .strokeRoundedRect(b.x + 4, top, b.w - 8, hh, 16)
     this.rightCard.clear()
 
-    // Logo — far left.
-    this.wordmark.setVisible(true).setOrigin(0, 0.5).setPosition(b.x + 18 * s, cy).setDisplaySize(132 * s, 132 * s * (1140 / 3663))
-
-    // Buttons — centre (pause · sound · home).
-    const gap = 47 * s
-    const bcx = b.x + b.w * 0.46
-    this.miniBtns.forEach((c, i) => c.setVisible(true).setScale(s * 0.88).setPosition(bcx + (i - 1) * gap, cy))
-
-    // Next bubble — right of the buttons, before the score.
-    const nx = b.x + b.w - 130 * s
-    this.nextLabel.setOrigin(0.5).setPosition(nx, cy - 19 * s).setFontSize(this.fs(9, s)).setVisible(true)
-    this.nextDisplay = 30 * s
-    this.nextImg.setPosition(nx, cy + 5 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
+    // Logo — far left (moderate; the buttons and score get the room).
+    const logoH = hh * 0.34
+    const logoW = logoH * (3663 / 1140)
+    const logoX = b.x + hh * 0.3
+    this.wordmark.setVisible(true).setOrigin(0, 0.5).setPosition(logoX, cy).setDisplaySize(logoW, logoH)
 
     // Score — far right.
-    const scx = b.x + b.w - 18 * s
-    this.scoreLabel.setOrigin(1, 0.5).setPosition(scx, cy - 16 * s).setFontSize(this.fs(9, s))
-    this.scoreText.setOrigin(1, 0.5).setPosition(scx, cy + 3 * s).setFontSize(this.fs(23, s))
-    this.bestText.setOrigin(1, 0.5).setPosition(scx, cy + 22 * s).setFontSize(this.fs(11, s))
+    const scx = b.x + b.w - hh * 0.32
+    this.scoreLabel.setOrigin(1, 0.5).setPosition(scx, cy - hh * 0.28).setFontSize(Math.round(hh * 0.17))
+    this.scoreText.setOrigin(1, 0.5).setPosition(scx, cy + hh * 0.05).setFontSize(Math.round(hh * 0.4))
+    this.bestText.setOrigin(1, 0.5).setPosition(scx, cy + hh * 0.33).setFontSize(Math.round(hh * 0.19))
+
+    // Next bubble — just left of the score.
+    this.nextDisplay = hh * 0.44
+    const nx = scx - hh * 1.55
+    this.nextLabel.setOrigin(0.5).setPosition(nx, cy - hh * 0.29).setFontSize(Math.round(hh * 0.17)).setVisible(true)
+    this.nextImg.setPosition(nx, cy + hh * 0.09).setDisplaySize(this.nextDisplay, this.nextDisplay)
+
+    // Buttons — centred between the logo and the next bubble (pause · sound · home).
+    const bd = hh * 0.58 // button diameter
+    const bgap = bd * 1.2
+    const nextLeft = nx - this.nextDisplay / 2
+    const bcx = (logoX + logoW + nextLeft) / 2
+    this.miniBtns.forEach((c, i) => c.setVisible(true).setScale(bd / 46).setPosition(bcx + (i - 1) * bgap, cy))
 
     // Hide landscape-only chrome.
     this.pauseBtn.setVisible(false)
