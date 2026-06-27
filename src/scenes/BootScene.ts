@@ -94,5 +94,13 @@ export class BootScene extends Phaser.Scene {
       g.fillRoundedRect(5, 11, 14, 2.6, 1.3)
       g.fillRoundedRect(5, 16, 14, 2.6, 1.3)
     })
+
+    make('ic-rank', (g) => {
+      g.fillStyle(0xffffff, 1)
+      // ascending bars — a leaderboard / ranking glyph
+      g.fillRoundedRect(4, 13, 4, 7, 1)
+      g.fillRoundedRect(10, 9, 4, 11, 1)
+      g.fillRoundedRect(16, 5, 4, 15, 1)
+    })
   }
 }

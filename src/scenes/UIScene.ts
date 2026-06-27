@@ -40,9 +40,7 @@ export class UIScene extends Phaser.Scene {
   private soundIcon!: Phaser.GameObjects.Image
   private soundText!: Phaser.GameObjects.Text
   private soundSetColor!: (c: number) => void
-  private miniBtns: Phaser.GameObjects.Container[] = []
-  private miniSoundIcon!: Phaser.GameObjects.Image
-  private miniSoundCircle!: Phaser.GameObjects.Arc
+  private leaderboardBtn!: Phaser.GameObjects.Container
   private menuBtn!: Phaser.GameObjects.Container
   private menuPanel!: Phaser.GameObjects.Graphics
   private menuOpen = false
@@ -108,8 +106,23 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, 'A/D / ←→ move   ·   Space / click drop   ·   Esc pause   ·   R restart', { fontFamily: sans, color: '#888888' })
       .setOrigin(0.5)
 
-    const pause = this.makeIconButton('ic-pause', 'Pause', 0x1971c2, () => this.gameScene.togglePause())
+    // Labeled action pills, shared between the landscape side-panel and the
+    // mobile menu dropdown. Pause/home/leaderboard also dismiss the menu; sound
+    // keeps it open so the on/off toggle stays visible. Wide enough for the
+    // "Leaderboard" label so all four pills line up.
+    const MENU_W = 168
+    const pause = this.makeIconButton('ic-pause', 'Pause', 0x1971c2, () => {
+      this.closeMenu()
+      this.gameScene.togglePause()
+    }, MENU_W)
     this.pauseBtn = pause.container
+
+    const lb = this.makeIconButton('ic-rank', 'Leaderboard', 0xe8a23d, () => {
+      this.closeMenu()
+      void openLeaderboard()
+    }, MENU_W)
+    this.leaderboardBtn = lb.container
+    this.leaderboardBtn.setVisible(false)
 
     const sound = this.makeIconButton(
       isMuted() ? 'ic-mute' : 'ic-sound',
@@ -119,36 +132,20 @@ export class UIScene extends Phaser.Scene {
         this.toggleMute()
         this.refreshSoundButtons()
       },
+      MENU_W,
     )
     this.muteBtn = sound.container
     this.soundIcon = sound.icon
     this.soundText = sound.text
     this.soundSetColor = sound.setColor
 
-    const home = this.makeIconButton('ic-home', 'Home', 0x6741d9, () => this.gameScene.goHome())
-    this.homeBtn = home.container
-
-    // Compact icon-only buttons for portrait / mobile (the text pills are too big
-    // there). On mobile they live in a dropdown behind the menu button; pause/home
-    // also dismiss the menu, sound keeps it open so the toggle is visible.
-    const mPause = this.makeMiniButton('ic-pause', 0x1971c2, () => {
-      this.closeMenu()
-      this.gameScene.togglePause()
-    })
-    const mSound = this.makeMiniButton(isMuted() ? 'ic-mute' : 'ic-sound', isMuted() ? 0x4a4f5c : 0x2b8a3e, () => {
-      this.toggleMute()
-      this.refreshSoundButtons()
-    })
-    const mHome = this.makeMiniButton('ic-home', 0x6741d9, () => {
+    const home = this.makeIconButton('ic-home', 'Home', 0x6741d9, () => {
       this.closeMenu()
       this.gameScene.goHome()
-    })
-    this.miniBtns = [mPause.container, mSound.container, mHome.container]
-    this.miniSoundIcon = mSound.icon
-    this.miniSoundCircle = mSound.circle
-    this.miniBtns.forEach((c) => c.setVisible(false))
+    }, MENU_W)
+    this.homeBtn = home.container
 
-    // Dropdown backdrop + the menu (hamburger) button that toggles it.
+    // Dropdown backdrop + the menu (hamburger) button that toggles it (mobile).
     this.menuPanel = this.add.graphics().setDepth(-5).setVisible(false)
     this.menuBtn = this.makeMiniButton('ic-menu', 0x33384a, () => this.toggleMenu()).container
     this.menuBtn.setVisible(false)
@@ -272,30 +269,34 @@ export class UIScene extends Phaser.Scene {
     this.nextLabel.setOrigin(0.5).setPosition(nx, cy - hh * 0.29).setFontSize(Math.round(hh * 0.17)).setVisible(true)
     this.nextImg.setPosition(nx, cy + hh * 0.09).setDisplaySize(this.nextDisplay, this.nextDisplay)
 
-    // Pause · sound · home drop down under the menu button, only while it's open.
+    // Action buttons drop down under the menu button as proper labeled pills,
+    // shown only while the menu is open.
     if (this.menuOpen) {
-      const innerPad = 7
-      const gap = hh * 0.14
-      const ddStep = bd + gap
+      const btns = this.menuButtonList()
+      const pscale = Phaser.Math.Clamp(hh / 76, 0.82, 1.2)
+      const pillH = 46 * pscale
+      const gap = pillH * 0.32
+      const innerPad = 10
       const panelTop = top + hh + 6
-      const panelX = menuX - bd / 2 - innerPad
+      const panelX = b.x + 6
+      const panelW = 168 * pscale + innerPad * 2
+      const panelH = btns.length * pillH + (btns.length - 1) * gap + innerPad * 2
       this.menuPanel
         .clear()
-        .fillStyle(0x14141b, 0.94)
-        .fillRoundedRect(panelX, panelTop, bd + innerPad * 2, bd * 3 + gap * 2 + innerPad * 2, 14)
+        .fillStyle(0x14141b, 0.95)
+        .fillRoundedRect(panelX, panelTop, panelW, panelH, 16)
         .lineStyle(1, 0xffffff, 0.08)
-        .strokeRoundedRect(panelX, panelTop, bd + innerPad * 2, bd * 3 + gap * 2 + innerPad * 2, 14)
+        .strokeRoundedRect(panelX, panelTop, panelW, panelH, 16)
         .setVisible(true)
-      const dd0 = panelTop + innerPad + bd / 2
-      this.miniBtns.forEach((c, i) => c.setVisible(true).setScale(bd / 46).setPosition(menuX, dd0 + i * ddStep))
+      const ccx = panelX + panelW / 2
+      const y0 = panelTop + innerPad + pillH / 2
+      btns.forEach((btn, i) => btn.setVisible(true).setScale(pscale).setPosition(ccx, y0 + i * (pillH + gap)))
+      if (!leaderboardEnabled()) this.leaderboardBtn.setVisible(false).setPosition(-500, -500)
     } else {
-      this.parkMiniButtons()
+      this.parkMenuButtons()
     }
 
     // Hide landscape-only chrome.
-    this.pauseBtn.setVisible(false)
-    this.muteBtn.setVisible(false)
-    this.homeBtn.setVisible(false)
     this.controlsText.setVisible(false)
     this.howtoLabel.setVisible(false)
     this.howtoText.setVisible(false)
@@ -322,10 +323,12 @@ export class UIScene extends Phaser.Scene {
     this.howtoText.setOrigin(0.5, 0).setPosition(leftCx, b.y + b.h * 0.4 + 34 * s).setFontSize(this.fs(13, s)).setLineSpacing(5 * s).setVisible(true)
 
     this.menuBtn.setVisible(false).setPosition(-500, -500)
-    this.parkMiniButtons()
-    this.pauseBtn.setPosition(leftCx, b.y + b.h * 0.64).setScale(s).setVisible(true)
-    this.muteBtn.setPosition(leftCx, b.y + b.h * 0.64 + 64 * s).setScale(s).setVisible(true)
-    this.homeBtn.setPosition(leftCx, b.y + b.h * 0.64 + 128 * s).setScale(s).setVisible(true)
+    this.menuPanel.setVisible(false)
+    if (!leaderboardEnabled()) this.leaderboardBtn.setVisible(false).setPosition(-500, -500)
+    const btns = this.menuButtonList()
+    const bScale = Math.min(s, (cardW - 16) / 168) // keep the pill inside the card
+    const btnTop = b.y + b.h * 0.6
+    btns.forEach((btn, i) => btn.setVisible(true).setScale(bScale).setPosition(leftCx, btnTop + i * 58 * s))
 
     // Right panel: next preview → score → progress ladder.
     // Aligned row-for-row with the left panel: NEXT↔wordmark, SCORE↔how-to,
@@ -485,6 +488,7 @@ export class UIScene extends Phaser.Scene {
     label: string,
     color: number,
     onClick: () => void,
+    w = 136,
   ): {
     container: Phaser.GameObjects.Container
     bg: Phaser.GameObjects.Rectangle
@@ -492,7 +496,6 @@ export class UIScene extends Phaser.Scene {
     text: Phaser.GameObjects.Text
     setColor: (c: number) => void
   } {
-    const w = 136
     const h = 46
     const r = h / 2 // full pill — bubbly, not boxy
     let current = color
@@ -585,8 +588,6 @@ export class UIScene extends Phaser.Scene {
     this.pauseSoundIcon.setTexture(iconKey).setDisplaySize(20, 20)
     this.pauseSoundText.setText(label)
     this.pauseSoundSetColor(color)
-    this.miniSoundIcon.setTexture(iconKey).setDisplaySize(24, 24)
-    this.miniSoundCircle.setFillStyle(color, 1)
   }
 
   private toggleMute(): void {
@@ -606,10 +607,20 @@ export class UIScene extends Phaser.Scene {
     this.applyLayout()
   }
 
-  // Hide the dropdown buttons AND move them off-screen so their hit areas can't
+  // The action buttons in menu order; Leaderboard only when it's configured.
+  private menuButtonList(): Phaser.GameObjects.Container[] {
+    const list = [this.pauseBtn]
+    if (leaderboardEnabled()) list.push(this.leaderboardBtn)
+    list.push(this.muteBtn, this.homeBtn)
+    return list
+  }
+
+  // Hide the menu buttons AND move them off-screen so their hit areas can't
   // swallow taps while collapsed (an invisible container still hit-tests).
-  private parkMiniButtons(): void {
+  private parkMenuButtons(): void {
     this.menuPanel.setVisible(false)
-    this.miniBtns.forEach((c) => c.setVisible(false).setPosition(-500, -500))
+    for (const c of [this.pauseBtn, this.leaderboardBtn, this.muteBtn, this.homeBtn]) {
+      c.setVisible(false).setPosition(-500, -500)
+    }
   }
 }
