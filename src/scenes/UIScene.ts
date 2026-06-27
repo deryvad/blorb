@@ -213,16 +213,16 @@ export class UIScene extends Phaser.Scene {
     this.goContent.setPosition(W / 2, H / 2).setScale(oScale)
   }
 
-  // Compact mobile HUD: two top-corner cards (logo + score on the left, icon
-  // buttons + next on the right), leaving the centre drop column clear.
+  // Compact mobile HUD: logo + buttons on the left, score + next on the right,
+  // each in a top-corner card, leaving the centre drop column clear.
   private layoutPortrait(L: Layout): void {
     const b = L.board
     const s = L.scale
     const top = b.y + 7 * s
-    const cardH = 100 * s
+    const cardH = 104 * s
     const r = 14 * s
-    const lcW = Phaser.Math.Clamp(b.w * 0.46, 150, 228)
-    const rcW = Phaser.Math.Clamp(b.w * 0.36, 132, 196)
+    const lcW = Phaser.Math.Clamp(b.w * 0.44, 148, 214)
+    const rcW = Phaser.Math.Clamp(b.w * 0.48, 166, 236)
     const lcX = b.x + 7 * s
     const rcX = b.x + b.w - 7 * s - rcW
 
@@ -238,27 +238,24 @@ export class UIScene extends Phaser.Scene {
         .strokeRoundedRect(cx, top, cw, cardH, r)
     }
 
-    // Left card: logo (top) + score / best (bottom).
-    const lx = lcX + 15 * s
-    this.wordmark
-      .setVisible(true)
-      .setOrigin(0, 0.5)
-      .setPosition(lx, top + 23 * s)
-      .setDisplaySize(106 * s, 106 * s * (1140 / 3663))
-    this.scoreLabel.setOrigin(0, 0.5).setPosition(lx, top + 49 * s).setFontSize(this.fs(10, s))
-    this.scoreText.setOrigin(0, 0).setPosition(lx, top + 56 * s).setFontSize(this.fs(26, s))
-    this.bestText.setOrigin(0, 0).setPosition(lx, top + 84 * s).setFontSize(this.fs(12, s))
-
-    // Right card: icon buttons (top) + next (bottom).
-    const gap = 45 * s
-    const iconStart = rcX + rcW - 26 * s - (this.miniBtns.length - 1) * gap
+    // Left card: logo (top) + icon buttons (below, roomy gap), both centred.
+    const lcc = lcX + lcW / 2
+    this.wordmark.setVisible(true).setOrigin(0.5).setPosition(lcc, top + 27 * s).setDisplaySize(112 * s, 112 * s * (1140 / 3663))
+    const gap = 46 * s
     this.miniBtns.forEach((c, i) =>
-      c.setVisible(true).setScale(s * 0.86).setPosition(iconStart + i * gap, top + 26 * s),
+      c.setVisible(true).setScale(s * 0.86).setPosition(lcc + (i - 1) * gap, top + 77 * s),
     )
-    const nx = rcX + rcW / 2
-    this.nextLabel.setOrigin(0.5).setPosition(nx, top + 56 * s).setFontSize(this.fs(10, s)).setVisible(true)
-    this.nextDisplay = 30 * s
-    this.nextImg.setPosition(nx, top + 78 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
+
+    // Right card: score (left) + next (right).
+    const sx = rcX + 16 * s
+    this.scoreLabel.setOrigin(0, 0.5).setPosition(sx, top + 30 * s).setFontSize(this.fs(10, s))
+    this.scoreText.setOrigin(0, 0).setPosition(sx, top + 38 * s).setFontSize(this.fs(26, s))
+    this.bestText.setOrigin(0, 0).setPosition(sx, top + 70 * s).setFontSize(this.fs(12, s))
+
+    const nx = rcX + rcW - 32 * s
+    this.nextLabel.setOrigin(0.5).setPosition(nx, top + 36 * s).setFontSize(this.fs(10, s)).setVisible(true)
+    this.nextDisplay = 32 * s
+    this.nextImg.setPosition(nx, top + 64 * s).setDisplaySize(this.nextDisplay, this.nextDisplay)
 
     // Hide landscape-only chrome.
     this.pauseBtn.setVisible(false)
