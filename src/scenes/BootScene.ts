@@ -87,5 +87,12 @@ export class BootScene extends Phaser.Scene {
       g.lineBetween(16, 8, 22, 16)
       g.lineBetween(22, 8, 16, 16)
     })
+
+    make('ic-menu', (g) => {
+      g.fillStyle(0xffffff, 1)
+      g.fillRoundedRect(5, 6, 14, 2.6, 1.3)
+      g.fillRoundedRect(5, 11, 14, 2.6, 1.3)
+      g.fillRoundedRect(5, 16, 14, 2.6, 1.3)
+    })
   }
 }
