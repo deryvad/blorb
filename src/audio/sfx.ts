@@ -49,9 +49,10 @@ export function installAudioUnlock(): void {
 
 // --- Background music ---------------------------------------------------------
 
-// The looped track at public/fizzy.mp3. We fetch + decode it into our own
-// AudioContext and route it through musicGain, so the existing mute toggle and
-// volume slider control it for free.
+// The looped track at public/fizzy.m4a (AAC ~96kbps — small so it doesn't hog
+// mobile bandwidth on first tap). We fetch + decode it into our own AudioContext
+// and route it through musicGain, so the existing mute toggle and volume slider
+// control it for free.
 function startMusic(): void {
   const c = getCtx()
   if (!c || c.state !== 'running' || musicStarted) return
@@ -60,7 +61,7 @@ function startMusic(): void {
   musicGain.gain.value = musicTarget()
   musicGain.connect(c.destination)
 
-  fetch('fizzy.mp3')
+  fetch('fizzy.m4a')
     .then((r) => r.arrayBuffer())
     .then((buf) => c.decodeAudioData(buf))
     .then((audio) => {
